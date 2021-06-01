@@ -88,7 +88,7 @@ async def _(e):
     async for msg in ultroid_bot.iter_messages(int(c), reverse=True):
         try:
             await asyncio.sleep(1.3)
-            await ultroid_bot.forward_message(int(d), msg)
+            await context.ultroid_bot.forward_message(int(d), msg)
         except BaseException:
             pass
     await z.edit("Done")
