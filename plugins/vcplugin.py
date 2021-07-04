@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -27,14 +27,15 @@
 • `{i}rmvcaccess <id/username/reply to msg>`
     Remove access of Voice Chat Bot.
 
-• **Voice Chat Bot Commands**
+• **Voice Chat - Bot Commands**
    `/play ytsearch : song-name`
    `/play youtube link`
    `/current`
    `/skip`
    `/exitVc`
-
 """
+
+from os import remove
 
 from pyUltroid.functions.vc_sudos import add_vcsudo, del_vcsudo, get_vcsudos, is_vcsudo
 from telethon.tl.functions.channels import GetFullChannelRequest as getchat
@@ -66,7 +67,6 @@ async def _(e):
     try:
         await e.client(stopvc(await get_call(e)))
         await eor(e, "`Voice Chat Stopped...`")
-        vcdyno("off")
     except Exception as ex:
         await eor(e, f"`{str(ex)}`")
 
@@ -76,12 +76,19 @@ async def _(e):
 )
 async def _(e):
     zz = await eor(e, "`VC bot started...`")
-    er, out = await bash("npm start")
+    er, out = await bash("python vcstarter.py & sleep 10 && npm start")
     LOGS.info(er)
     LOGS.info(out)
-    vcdyno("on")
     if er:
-        await zz.edit(f"Failed {er}\n\n{out}")
+        msg = f"Failed {er}\n\n{out}"
+        if len(msg) > 4096:
+            with open("vc-error.txt", "w") as f:
+                f.write(msg.replace("`", ""))
+            await e.reply(file="vc-error.txt")
+            await zz.delete()
+            remove("vc-error.txt")
+            return
+        await zz.edit(msg)
 
 
 @ultroid_cmd(
@@ -201,16 +208,3 @@ async def _(e):
         )
     except Exception as ex:
         return await eod(xx, f"`{str(ex)}`", time=5)
-
-
-@asst_cmd("exitVc")
-async def evc(e):
-    if e.sender.id == ultroid_bot.uid:
-        vcdyno("off")
-    elif is_sudo(e.sender.id):
-        vcdyno("off")
-    elif is_vcsudo(e.sender.id):
-        vcdyno("off")
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
