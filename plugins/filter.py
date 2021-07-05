@@ -99,11 +99,11 @@ async def fl(e):
             if kk:
                 msg = k["msg"]
                 media = k["media"]
-                await e.sendMessage(msg, file=media)
+                await e.reply(msg, file=media)
 
         else:
             k = get_reply(chat, xx)
             if k:
                 msg = k["msg"]
                 media = k["media"]
-                await e.sendMessage(msg, file=media)
+                await e.reply(msg, file=media)
