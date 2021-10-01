@@ -19,6 +19,7 @@
 """
 
 import os
+import re
 
 from pyUltroid.functions.filter_db import *
 from telegraph import upload_file as uf
@@ -38,17 +39,16 @@ async def af(e):
     if wt and wt.media:
         wut = mediainfo(wt.media)
         if wut.startswith(("pic", "gif")):
-            dl = await bot.download_media(wt.media)
+            dl = await wt.download_media()
             variable = uf(dl)
             m = "https://telegra.ph" + variable[0]
         elif wut == "video":
             if wt.media.document.size > 8 * 1000 * 1000:
-                return await eod(x, "`Unsupported Media`")
-            else:
-                dl = await bot.download_media(wt.media)
-                variable = uf(dl)
-                os.remove(dl)
-                m = "https://telegra.ph" + variable[0]
+                return await eor(x, "`Unsupported Media`", time=5)
+            dl = await wt.download_media()
+            variable = uf(dl)
+            os.remove(dl)
+            m = "https://telegra.ph" + variable[0]
         else:
             m = pack_bot_file_id(wt.media)
         if wt.text:
@@ -86,24 +86,13 @@ async def fl(e):
         return
     xx = (e.text).lower()
     chat = e.chat_id
-    x = get_filter(int(chat))
+    x = get_filter(chat)
     if x:
-        if " " in xx:
-            xx = xx.split(" ")
-            kk = ""
-            for c in xx:
-                if c in x:
-                    k = get_reply(int(chat), c)
-                    if k:
-                        kk = k
-            if kk:
-                msg = k["msg"]
-                media = k["media"]
-                await e.reply(msg, file=media)
-
-        else:
-            k = get_reply(chat, xx)
-            if k:
-                msg = k["msg"]
-                media = k["media"]
-                await e.reply(msg, file=media)
+        for c in x:
+            pat = r"( |^|[^\w])" + re.escape(c) + r"( |$|[^\w])"
+            if re.search(pat, xx):
+                k = x.get(c)
+                if k:
+                    msg = k["msg"]
+                    media = k["media"]
+                    await e.reply(msg, file=media)

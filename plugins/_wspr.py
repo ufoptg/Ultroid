@@ -41,7 +41,7 @@ async def _(e):
         put = e.pattern_match.group(1)
     if put:
         try:
-            results = await ultroid_bot.inline_query(asst.me.username, f"msg {put}")
+            results = await e.client.inline_query(asst.me.username, f"msg {put}")
         except rep:
             return await eor(
                 e,
@@ -142,8 +142,7 @@ async def _(e):
             snap.update({e.id: desc})
         except ValueError:
             sur = e.builder.article(
-                title="Type ur msg",
-                text=f"You Didn't Type Your Msg",
+                title="Type ur msg", text="You Didn't Type Your Msg"
             )
     await e.answer([sur])
 

@@ -4,7 +4,6 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-
 """
 ✘ Commands Available -
 
@@ -13,45 +12,42 @@
     eg. `{i}schedule Hello 100` It deliver msg after 100 sec.
     eg. `{i}schedule Hello 1h` It deliver msg after an hour.
 """
-
 from datetime import timedelta
 
 from . import *
 
 
-@ultroid_cmd(pattern="schedule ?(.*)")
+@ultroid_cmd(pattern="schedule ?(.*)", fullsudo=True)
 async def _(e):
-    if not e.out and not is_fullsudo(e.sender_id):
-        return await eod(e, "`This Command is Full Sudo Restricted`")
     x = e.pattern_match.group(1)
     xx = await e.get_reply_message()
     if x and not xx:
         y = x.split(" ")[-1]
         k = x.replace(y, "")
         if y.isdigit():
-            await ultroid_bot.send_message(
+            await e.client.send_message(
                 e.chat_id, k, schedule=timedelta(seconds=int(y))
             )
-            await eod(e, "`Scheduled msg Succesfully`")
+            await eor(e, "`Scheduled msg Succesfully`", time=5)
         else:
             try:
                 z = await ban_time(e, y)
-                await ultroid_bot.send_message(e.chat_id, k, schedule=z)
-                await eod(e, "`Scheduled msg Succesfully`")
+                await e.client.send_message(e.chat_id, k, schedule=z)
+                await eor(e, "`Scheduled msg Succesfully`", time=5)
             except BaseException:
-                await eod(e, "`Incorrect Format`")
+                await eor(e, "`Incorrect Format`", time=5)
     elif xx and x:
         if x.isdigit():
             await e.client.send_message(
                 e.chat_id, xx, schedule=timedelta(seconds=int(x))
             )
-            await eod(e, "`Scheduled msg Succesfully`")
+            await eor(e, "`Scheduled msg Succesfully`", time=5)
         else:
             try:
                 z = await ban_time(e, x)
-                await ultroid_bot.send_message(e.chat_id, xx, schedule=z)
-                await eod(e, "`Scheduled msg Succesfully`")
+                await e.client.send_message(e.chat_id, xx, schedule=z)
+                await eor(e, "`Scheduled msg Succesfully`", time=5)
             except BaseException:
-                await eod(e, "`Incorrect Format`")
+                await eor(e, "`Incorrect Format`", time=5)
     else:
-        return await eod(e, "`Incorrect Format`")
+        return await eor(e, "`Incorrect Format`", time=5)

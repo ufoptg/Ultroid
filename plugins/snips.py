@@ -40,18 +40,17 @@ async def an(e):
     if wt and wt.media:
         wut = mediainfo(wt.media)
         if wut.startswith(("pic", "gif")):
-            dl = await bot.download_media(wt.media)
+            dl = await wt.download_media()
             variable = uf(dl)
             os.remove(dl)
             m = "https://telegra.ph" + variable[0]
         elif wut == "video":
             if wt.media.document.size > 8 * 1000 * 1000:
-                return await eod(x, "`Unsupported Media`")
-            else:
-                dl = await bot.download_media(wt.media)
-                variable = uf(dl)
-                os.remove(dl)
-                m = "https://telegra.ph" + variable[0]
+                return await eor(x, "`Unsupported Media`", time=5)
+            dl = await wt.download_media()
+            variable = uf(dl)
+            os.remove(dl)
+            m = "https://telegra.ph" + variable[0]
         else:
             m = pack_bot_file_id(wt.media)
         if wt.text:
@@ -84,17 +83,16 @@ async def lsnote(e):
         await eor(e, "No Snips Found Here")
 
 
-@ultroid_bot.on(events.NewMessage(outgoing=True))
+@ultroid_bot.on(events.NewMessage())
 async def notes(e):
+    if not e.out and str(e.sender_id) not in sudoers():
+        return
     xx = (e.text).lower()
     if not xx.startswith("$"):
         return
-    xx = xx.replace("$", "")
-    x = get_snips()
-    if x:
-        if " " in xx:
-            xx = xx.split(" ")[0]
-        k = get_reply(xx)
+    xx = xx.replace("$", "").split()
+    for z in xx:
+        k = get_snips(z)
         if k:
             msg = k["msg"]
             media = k["media"]

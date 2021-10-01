@@ -10,7 +10,7 @@
 
 • `{i}compress <reply to video>`
     optional `crf` and `stream`
-    Example : `{i}compress 27 | stream` or `{i}compress 28`
+    Example : `{i}compress 27 stream` or `{i}compress 28`
     Encode the replied video according to CRF value.
     Less CRF == High Quality, More Size
     More CRF == Low Quality, Less Size
@@ -32,48 +32,58 @@ from telethon.tl.types import DocumentAttributeVideo
 
 from . import *
 
+compressor_queue = []
 
-@ultroid_cmd(pattern="compress ?((\\d+)(.*)|$)")
+
+@ultroid_cmd(pattern="compress ?(.*)")
 async def _(e):
-    crf = e.pattern_match.group(1)
-    if not crf:
-        crf = 27
-    to_stream = e.pattern_match.group(2)
+    cr = e.pattern_match.group(1)
+    crf = 27
+    to_stream = False
+    if cr:
+        k = e.text.split()
+        if len(k) == 2:
+            crf = int(k[1]) if k[1].isdigit() else 27
+        elif len(k) > 2:
+            crf = int(k[1]) if k[1].isdigit() else 27
+            to_stream = "stream" in k[2]
     vido = await e.get_reply_message()
-    if vido and vido.media:
-        if "video" in mediainfo(vido.media):
-            if hasattr(vido.media, "document"):
-                vfile = vido.media.document
-                name = vido.file.name
-            else:
-                vfile = vido.media
-                name = ""
-            if not name:
-                name = "video_" + dt.now().isoformat("_", "seconds") + ".mp4"
-            xxx = await eor(e, "`Trying To Download...`")
-            c_time = time.time()
-            file = await downloader(
-                "resources/downloads/" + name,
-                vfile,
-                xxx,
-                c_time,
-                "Downloading " + name + "...",
-            )
-            o_size = os.path.getsize(file.name)
-            d_time = time.time()
-            diff = time_formatter((d_time - c_time) * 1000)
-            file_name = (file.name).split("/")[-1]
-            out = file_name.replace(file_name.split(".")[-1], " compressed.mkv")
-            await xxx.edit(
-                f"`Downloaded {file.name} of {humanbytes(o_size)} in {diff}.\nNow Compressing...`"
-            )
-            x, y = await bash(
-                f'mediainfo --fullscan """{file.name}""" | grep "Frame count"'
-            )
-            total_frames = x.split(":")[1].split("\n")[0]
-            progress = "progress.txt"
-            with open(progress, "w") as fk:
-                pass
+    if vido and vido.media and "video" in mediainfo(vido.media):
+        if hasattr(vido.media, "document"):
+            vfile = vido.media.document
+            name = vido.file.name
+        else:
+            vfile = vido.media
+            name = ""
+        if not name:
+            name = "video_" + dt.now().isoformat("_", "seconds") + ".mp4"
+        xxx = await eor(e, "`Trying To Download...`")
+        c_time = time.time()
+        file = await downloader(
+            "resources/downloads/" + name,
+            vfile,
+            xxx,
+            c_time,
+            "Downloading " + name + "...",
+        )
+        o_size = os.path.getsize(file.name)
+        d_time = time.time()
+        diff = time_formatter((d_time - c_time) * 1000)
+        file_name = (file.name).split("/")[-1]
+        out = file_name.replace(file_name.split(".")[-1], "compressed.mkv")
+        await xxx.edit(
+            f"`Downloaded {file.name} of {humanbytes(o_size)} in {diff}.\nNow Compressing...`"
+        )
+        x, y = await bash(
+            f'mediainfo --fullscan """{file.name}""" | grep "Frame count"'
+        )
+        total_frames = x.split(":")[1].split("\n")[0]
+        number = random.randint(1, 10000)
+        progress = f"progress-{number}.txt"
+        with open(progress, "w") as fk:
+            pass
+        compressor_queue.append(progress)
+        while os.path.exists(progress) and len(compressor_queue) != 0:
             proce = await asyncio.create_subprocess_shell(
                 f'ffmpeg -hide_banner -loglevel quiet -progress {progress} -i """{file.name}""" -preset ultrafast -vcodec libx265 -crf {crf} """{out}""" -y',
                 stdout=asyncio.subprocess.PIPE,
@@ -85,7 +95,7 @@ async def _(e):
                     text = fil.read()
                     frames = re.findall("frame=(\\d+)", text)
                     size = re.findall("total_size=(\\d+)", text)
-
+                    speed = 0
                     if len(frames):
                         elapse = int(frames[-1])
                     if len(size):
@@ -93,16 +103,19 @@ async def _(e):
                         per = elapse * 100 / int(total_frames)
                         time_diff = time.time() - int(d_time)
                         speed = round(elapse / time_diff, 2)
-                        eta = time_formatter(
-                            ((int(total_frames) - elapse) / speed) * 1000
-                        )
+                    if int(speed) != 0:
+                        some_eta = ((int(total_frames) - elapse) / speed) * 1000
                         text = f"`Compressing {file_name} at {crf} CRF.\n`"
                         progress_str = "`[{0}{1}] {2}%\n\n`".format(
-                            "".join(["●" for i in range(math.floor(per / 5))]),
-                            "".join(["" for i in range(20 - math.floor(per / 5))]),
+                            "".join("●" for i in range(math.floor(per / 5))),
+                            "".join("" for i in range(20 - math.floor(per / 5))),
                             round(per, 2),
                         )
-                        e_size = humanbytes(size)
+
+                        e_size = (
+                            humanbytes(size) + " of ~" + humanbytes((size / per) * 100)
+                        )
+                        eta = "~" + time_formatter(some_eta)
                         try:
                             await xxx.edit(
                                 text
@@ -135,13 +148,13 @@ async def _(e):
                 xxx,
                 "Uploading " + out + "...",
             )
-            if to_stream and "| stream" in to_stream:
+            if to_stream:
                 metadata = extractMetadata(createParser(out))
                 duration = metadata.get("duration").seconds
                 hi, _ = await bash(f'mediainfo "{out}" | grep "Height"')
                 wi, _ = await bash(f'mediainfo "{out}" | grep "Width"')
-                height = int(hi.split(":")[1].split()[0])
-                width = int(wi.split(":")[1].split()[0])
+                height = int(hi.split(":")[1].split("pixels")[0].replace(" ", ""))
+                width = int(wi.split(":")[1].split("pixels")[0].replace(" ", ""))
                 attributes = [
                     DocumentAttributeVideo(
                         duration=duration, w=width, h=height, supports_streaming=True
@@ -167,7 +180,7 @@ async def _(e):
                 )
             await xxx.delete()
             os.remove(out)
-        else:
-            await eod(e, "`Reply To Video File Only`")
+            os.remove(progress)
+            compressor_queue.remove(progress)
     else:
-        await eod(e, "`Reply To Video File Only`")
+        await eor(e, "`Reply To Video File Only`", time=5)

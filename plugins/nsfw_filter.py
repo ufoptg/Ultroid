@@ -9,16 +9,17 @@
 ✘ Commands Available -
 
 •`{i}addnsfw <ban/mute/kick>`
-   If someone sends 18+ content it will delete and takes action.
+   If someone sends 18+ content it will be deleted and action will be taken.
 
 •`{i}remnsfw`
-   Remove Chat from nsfw filter.
+   Remove Chat from nsfw filtering.
 """
 
 import os
 
 import requests
 from ProfanityDetector import detector
+from pyUltroid.functions.nsfw_db import *
 
 from . import *
 
@@ -30,9 +31,7 @@ async def addnsfw(e):
             e, f"Get Api from deepai.org and Add It `{HNDLR}setredis DEEP_API your-api`"
         )
     action = e.pattern_match.group(1)
-    if not action:
-        action = "mute"
-    elif ("ban" or "kick" or "mute") not in action:
+    if not action or ("ban" or "kick" or "mute") not in action:
         action = "mute"
     nsfw_chat(e.chat_id, action)
     await eor(e, "Added This Chat To Nsfw Filter")
@@ -54,7 +53,7 @@ async def checknsfw(e):
     if action and udB.get("DEEP_API") and e.media:
         pic, name, nsfw = "", "", 0
         try:
-            pic = await ultroid_bot.download_media(e.media, thumb=-1)
+            pic = await e.download_media(thumb=-1)
         except BaseException:
             pass
         if e.file:

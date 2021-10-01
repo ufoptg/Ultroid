@@ -4,12 +4,12 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-
 """
 ✘ Commands Available
 
-• `{i}zip <reply to file>
+• `{i}zip <reply to file>`
     zip the replied file
+    To set password on zip: `{i}zip <password>` reply to file
 
 • `{i}unzip <reply to zip file>`
     unzip the replied file.
@@ -19,16 +19,16 @@
 
 • `{i}dozip`
    upload batch zip the files u added from `{i}azip`
+   To set Password: `{i}dozip <password>`
 
 """
-
 import os
 import time
 
 from . import *
 
 
-@ultroid_cmd(pattern="zip$")
+@ultroid_cmd(pattern="zip ?(.*)")
 async def zipp(event):
     reply = await event.get_reply_message()
     t = time.time()
@@ -46,10 +46,13 @@ async def zipp(event):
         else:
             file = await event.download_media(reply)
     inp = file.replace(file.split(".")[-1], "zip")
-    await bash(f"zip -r {inp} {file}")
+    if event.pattern_match.group(1):
+        await bash(f"zip -r --password {event.pattern_match.group(1)} {inp} {file}")
+    else:
+        await bash(f"zip -r {inp} {file}")
     k = time.time()
     xxx = await uploader(inp, inp, k, xx, "Uploading...")
-    await ultroid_bot.send_file(
+    await event.client.send_file(
         event.chat_id,
         xxx,
         force_document=True,
@@ -71,30 +74,25 @@ async def unzipp(event):
         return
     xx = await eor(event, "`Processing...`")
     if reply.media:
-        if hasattr(reply.media, "document"):
-            file = reply.media.document
-            mime_type = file.mime_type
-            if "application" not in mime_type:
-                return await xx.edit("`Reply To zipped File`")
-            image = await downloader(
-                reply.file.name, reply.media.document, xx, t, "Downloading..."
-            )
-            file = image.name
-            if not file.endswith(("zip", "rar", "exe")):
-                return await xx.edit("`Reply To zip File Only`")
-        else:
+        if not hasattr(reply.media, "document"):
             return await xx.edit("`Reply to zip file only`")
-    if not os.path.isdir("unzip"):
-        os.mkdir("unzip")
-    else:
-        os.system("rm -rf unzip")
-        os.mkdir("unzip")
+        file = reply.media.document
+        if not reply.file.name.endswith(("zip", "rar", "exe")):
+            return await xx.edit("`Reply To zipped File only`")
+        image = await downloader(
+            reply.file.name, reply.media.document, xx, t, "Downloading..."
+        )
+        file = image.name
+    if os.path.isdir("unzip"):
+        await bash("rm -rf unzip")
+    os.mkdir("unzip")
     await bash(f"7z x {file} -aoa -ounzip")
+    await asyncio.sleep(4)
     ok = get_all_files("unzip")
     for x in ok:
         k = time.time()
         xxx = await uploader(x, x, k, xx, "Uploading...")
-        await ultroid_bot.send_file(
+        await event.client.send_file(
             event.chat_id,
             xxx,
             force_document=True,
@@ -128,22 +126,27 @@ async def azipp(event):
     )
 
 
-@ultroid_cmd(pattern="dozip$")
+@ultroid_cmd(pattern="dozip ?(.*)")
 async def do_zip(event):
     if not os.path.isdir("zip"):
         return await eor(
             event, "First All Files Via {i}addzip then doZip to zip all files at one."
         )
     xx = await eor(event, "`processing`")
-    await bash(f"zip -r ultroid.zip zip/*")
+    if event.pattern_match.group(1):
+        await bash(
+            f"zip -r --password {event.pattern_match.group(1)} ultroid.zip zip/*"
+        )
+    else:
+        await bash("zip -r ultroid.zip zip/*")
     k = time.time()
     xxx = await uploader("ultroid.zip", "ultroid.zip", k, xx, "Uploading...")
-    await ultroid_bot.send_file(
+    await event.client.send_file(
         event.chat_id,
         xxx,
         force_document=True,
         thumb="resources/extras/ultroid.jpg",
     )
-    os.system("rm -rf zip")
+    await bash("rm -rf zip")
     os.remove("ultroid.zip")
     await xx.delete()

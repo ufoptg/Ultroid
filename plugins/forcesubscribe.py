@@ -26,53 +26,32 @@
 import re
 
 from pyUltroid.functions.forcesub_db import *
-from telethon import events
-from telethon.errors.rpcerrorlist import UserNotParticipantError
+from telethon.errors.rpcerrorlist import ChatAdminRequiredError, UserNotParticipantError
 from telethon.tl.custom import Button
 from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.tl.functions.messages import ExportChatInviteRequest
 
 from . import *
 
-
-@ultroid_bot.on(events.ChatAction())
-async def forcesub(ult):
-    if not udB.get("FORCESUB"):
-        return
-    if not (ult.user_joined or ult.user_added):
-        return
-    if not get_forcesetting(ult.chat_id):
-        return
-    user = await ult.get_user()
-    if user.bot:
-        return
-    joinchat = get_forcesetting(ult.chat_id)
-    try:
-        await ultroid_bot(GetParticipantRequest(int(joinchat), user.id))
-    except UserNotParticipantError:
-        await ultroid_bot.edit_permissions(ult.chat_id, user.id, send_messages=False)
-        res = await ultroid_bot.inline_query(
-            asst.me.username, f"fsub {user.id}_{joinchat}"
-        )
-        await res[0].click(ult.chat_id, reply_to=ult.action_message.id)
+CACHE = {}
 
 
 @ultroid_cmd(pattern="fsub ?(.*)", admins_only=True, groups_only=True)
 async def addfor(e):
     match = e.pattern_match.group(1)
     if not match:
-        return await eod(e, "Give Channel where you want User to Join !")
+        return await eor(e, "Give Channel where you want User to Join !", time=5)
     if match.startswith("@"):
         ch = match
     else:
         try:
             ch = int(match)
         except BaseException:
-            return await eod(e, "Give Correct Channel Username or id")
+            return await eor(e, "Give Correct Channel Username or id", time=5)
     try:
-        match = (await ultroid_bot.get_entity(ch)).id
+        match = (await e.client.get_entity(ch)).id
     except BaseException:
-        return await eod(e, "Give Correct Channel Username or id")
+        return await eor(e, "Give Correct Channel Username or id", time=5)
     if not str(match).startswith("-100"):
         match = int("-100" + str(match))
     add_forcesub(e.chat_id, match)
@@ -83,7 +62,7 @@ async def addfor(e):
 async def remor(e):
     res = rem_forcesub(e.chat_id)
     if not res:
-        return await eod(e, "ForceSub was not Active in this Chat !")
+        return await eor(e, "ForceSub was not Active in this Chat !", time=5)
     await eor(e, "Removed ForceSub...")
 
 
@@ -91,8 +70,8 @@ async def remor(e):
 async def getfsr(e):
     res = get_forcesetting(e.chat_id)
     if not res:
-        return await eod(e, "ForceSub is Not Active In This Chat !")
-    cha = await ultroid_bot.get_entity(int(res))
+        return await eor(e, "ForceSub is Not Active In This Chat !", time=5)
+    cha = await e.client.get_entity(int(res))
     await eor(e, f"**ForceSub Status** : `Active`\n- **{cha.title}** `({res})`")
 
 
@@ -126,7 +105,7 @@ async def fcall(e):
 async def diesoon(e):
     match = (e.data_match.group(1)).decode("UTF-8")
     spli = match.split("_")
-    if not e.sender_id == int(spli[0]):
+    if e.sender_id != int(spli[0]):
         return await e.answer("This Message is Not for You", alert=True)
     try:
         await ultroid_bot(GetParticipantRequest(int(spli[1]), int(spli[0])))
@@ -138,3 +117,42 @@ async def diesoon(e):
         e.chat_id, int(spli[0]), send_messages=True, until_date=None
     )
     await e.edit("Thanks For Joining ! ")
+
+
+@ultroid_bot.on(events.NewMessage(incoming=True))
+async def cacheahs(ult):
+    if udB.get("FORCESUB"):
+        user = await ult.get_sender()
+        joinchat = get_forcesetting(ult.chat_id)
+        if not joinchat or user.bot:
+            return
+        if CACHE.get(ult.chat_id):
+            if CACHE[ult.chat_id].get(user.id):
+                CACHE[ult.chat_id].update({user.id: CACHE[ult.chat_id][user.id] + 1})
+            else:
+                CACHE[ult.chat_id].update({user.id: 1})
+        else:
+            CACHE.update({ult.chat_id: {user.id: 1}})
+        count = CACHE[ult.chat_id][user.id]
+        if count == 11:
+            CACHE[ult.chat_id][user.id].update(1)
+            return
+        if count in range(2, 11):
+            return
+        try:
+            await ultroid_bot.get_permissions(int(joinchat), user.id)
+            return
+        except UserNotParticipantError:
+            pass
+        try:
+            await ultroid_bot.edit_permissions(
+                ult.chat_id, user.id, send_messages=False
+            )
+        except ChatAdminRequiredError:
+            return
+        except Exception as e:
+            LOGS.info(e)
+        res = await ultroid_bot.inline_query(
+            asst.me.username, f"fsub {user.id}_{joinchat}"
+        )
+        await res[0].click(ult.chat_id, reply_to=ult.id)

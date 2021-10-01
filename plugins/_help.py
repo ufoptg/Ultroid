@@ -5,21 +5,36 @@
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-from support import *
+from pyUltroid.dB.core import *
 from telethon.errors.rpcerrorlist import BotInlineDisabledError as dis
 from telethon.errors.rpcerrorlist import BotMethodInvalidError
 from telethon.errors.rpcerrorlist import BotResponseTimeoutError as rep
-from telethon.tl.custom import Button
 
 from . import *
 
+C_PIC = udB.get("INLINE_PIC")
+_file_to_replace = C_PIC or "resources/extras/inline.jpg"
 
-@ultroid_cmd(
-    pattern="help ?(.*)",
-)
-async def ult(ult):
+_main_help_menu = [
+    [
+        Button.inline("• Plugins", data="hrrrr"),
+        Button.inline("• Addons", data="frrr"),
+    ],
+    [
+        Button.inline("••Voice Chat", data="vc_helper"),
+        Button.inline("Inline Plugins••", data="inlone"),
+    ],
+    [
+        Button.inline("⚙️ Owner Tools", data="ownr"),
+        Button.url("Settings ⚙️", url=f"https://t.me/{asst.me.username}?start=set"),
+    ],
+    [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
+]
+
+
+@ultroid_cmd(pattern="help ?(.*)")
+async def _help(ult):
     plug = ult.pattern_match.group(1)
-    tgbot = asst.me.username
     if plug:
         try:
             if plug in HELP:
@@ -41,39 +56,30 @@ async def ult(ult):
                     x += "\n© @TeamUltroid"
                     await eor(ult, x)
                 except BaseException:
-                    await eod(ult, get_string("help_1").format(plug), time=5)
+                    await eor(ult, get_string("help_1").format(plug), time=5)
         except BaseException:
             await eor(ult, "Error 🤔 occured.")
     else:
+        tgbot = asst.me.username
         try:
-            results = await ultroid_bot.inline_query(tgbot, "ultd")
+            results = await ult.client.inline_query(tgbot, "ultd")
         except BotMethodInvalidError:
             z = []
             for x in LIST.values():
                 for y in x:
                     z.append(y)
             cmd = len(z) + 10
-            bnn = asst.me.username
-            return await ultroid_bot.send_message(
-                ult.chat_id,
+            if udB.get("MANAGER") and udB.get("DUAL_HNDLR") == "/":
+                _main_help_menu[2:3] = [[Button.inline("• Manager Help •", "mngbtn")]]
+            return await ult.reply(
                 get_string("inline_4").format(
                     OWNER_NAME,
                     len(PLUGINS) - 5,
                     len(ADDONS),
                     cmd,
                 ),
-                buttons=[
-                    [
-                        Button.inline("• Pʟᴜɢɪɴs", data="hrrrr"),
-                        Button.inline("• Aᴅᴅᴏɴs", data="frrr"),
-                    ],
-                    [
-                        Button.inline("Oᴡɴᴇʀ•ᴛᴏᴏʟꜱ", data="ownr"),
-                        Button.inline("Iɴʟɪɴᴇ•Pʟᴜɢɪɴs", data="inlone"),
-                    ],
-                    [Button.url("⚙️Sᴇᴛᴛɪɴɢs⚙️", url=f"https://t.me/{bnn}?start=set")],
-                    [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
-                ],
+                file=_file_to_replace,
+                buttons=_main_help_menu,
             )
         except rep:
             return await eor(

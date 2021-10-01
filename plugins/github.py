@@ -4,15 +4,12 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-
 """
 ✘ Commands Available -
 
 • `{i}github <username>`
     Get full information of the users github profile.
 """
-
-
 import requests
 
 from . import *
@@ -32,7 +29,7 @@ async def gitsearch(event):
     try:
         uname = ult["login"]
         uid = ult["id"]
-        upic = ult["avatar_url"]
+        upic = f"https://avatars.githubusercontent.com/u/{uid}"
         ulink = ult["html_url"]
         uacc = ult["name"]
         ucomp = ult["company"]
@@ -59,9 +56,4 @@ async def gitsearch(event):
 **Following** - {ufollowing}
 """
     await xx.delete()
-    await ultroid_bot.send_file(
-        event.chat_id,
-        upic,
-        caption=fullusr,
-        link_preview=False,
-    )
+    await event.reply(fullusr, file=upic)
