@@ -1,0 +1,47 @@
+# To better understand this file read this:
+# https://docs.ionos.space/docs/github-actions-customization/
+
+name: Deploy Now
+
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  deploy-now:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch project data
+        uses: ionos-deploy-now/retrieve-project-info-action@v1
+        id: project
+        with:
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          project: ${{ secrets.IONOS_PROJECT_ID }}
+          service-host: api-us.ionos.space
+
+      - name: checkout
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Run script
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        env:
+          API_HASH: e00d1f95f5fe8e93c8609d7deed801e3
+          API_ID: 84569798888888878456979
+          BOT_TOKEN: 1615811336:AAEnvHUwTS8Tq63nmfdzCO18nXSJ2-PZg8Q
+          REDIS_PASSWORD: ytnTjWQtmE5wYP3ELGJXNz6Xmr8xxoPm
+          REDIS_URI: +61 478 889 054
+          SESSION: 1BVtsOGoBu5Eyu0s220rJkLkqNTpCO0PDSo-MfCMW16PspBHl-JQm6hjH7_hjYPBtQUMYN1srqlLCfuxhU92506Ga8MVeTLT5uOUiNvndtecT3XJAMn3Zx-0V-ROscvrmPs19O8cKgKxw-1DGzNXkD1--y5Vte2QhVOqBjA9JnQA12QokePRyx9X3gQkSzZ13wRdNadogTY1G45objZCVLL4ujdDJbL0m_pAbpPhih667ZwLZpVNV4yyaswrFflBAMMSMq9l0MHEm-drMBKqJnkGe6cNjSnXTIjkY7XN9iXKJdf4HP2_P24pa1craEmisUwYRyA6HMggF_D7HiFjnYXtRa1OJN9Q=
+        run: ./installer.sh
+
+      - name: Deploy to IONOS
+        if: ${{ steps.project.outputs.deployment-enabled == 'true' }}
+        uses: ionos-deploy-now/deploy-to-ionos-action@v1
+        with:
+          project: ${{ secrets.IONOS_PROJECT_ID }}
+          branch-id: ${{ steps.project.outputs.branch-id }}
+          service-host: api-us.ionos.space
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          dist-folder: ./
