@@ -4,34 +4,23 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-`{i}makevoice <reply to audio>`
-   creates a voice note from Audio.
-
-`{i}atrim <from time> - <to time>`
-   trim audio as per given time.
-   time must be in seconds. `{i}atrim 50-70`
-
-`{i}extractaudio <reply to media>`
-   To extract the audio from it.
-
-"""
 
 import os
 import time
 from datetime import datetime as dt
 
-from pyUltroid.functions.tools import metadata
-from telethon.tl.types import DocumentAttributeAudio
+from pyUltroid.fns.tools import set_attributes
 
 from . import (
+    LOGS,
+    ULTConfig,
     bash,
     downloader,
     eod,
     eor,
     genss,
+    get_help,
     get_string,
     humanbytes,
     mediainfo,
@@ -40,6 +29,8 @@ from . import (
     ultroid_cmd,
     uploader,
 )
+
+__doc__ = get_help("help_audiotools")
 
 
 @ultroid_cmd(pattern="makevoice$")
@@ -50,30 +41,28 @@ async def vnc(e):
     if not mediainfo(r.media).startswith(("audio", "video")):
         return await eod(e, get_string("spcltool_1"))
     xxx = await e.eor(get_string("com_1"))
-    dl = r.file.name
-    c_time = time.time()
-    file = await downloader(
-        "resources/downloads/" + dl,
-        r.media.document,
-        xxx,
-        c_time,
-        "Downloading " + dl + "...",
+    file, _ = await e.client.fast_downloader(
+        r.document,
     )
     await xxx.edit(get_string("audiotools_2"))
     await bash(
         f"ffmpeg -i '{file.name}' -map 0:a -codec:a libopus -b:a 100k -vbr on out.opus"
     )
-    await e.client.send_message(
-        e.chat_id, file="out.opus", force_document=False, reply_to=r
-    )
+    try:
+        await e.client.send_message(
+            e.chat_id, file="out.opus", force_document=False, reply_to=r
+        )
+    except Exception as er:
+        LOGS.exception(er)
+        return await xxx.edit("`Failed to convert in Voice...`")
     await xxx.delete()
     os.remove(file.name)
     os.remove("out.opus")
 
 
-@ultroid_cmd(pattern="atrim ?(.*)")
+@ultroid_cmd(pattern="atrim( (.*)|$)")
 async def trim_aud(e):
-    sec = e.pattern_match.group(1)
+    sec = e.pattern_match.group(1).strip()
     if not sec or "-" not in sec:
         return await eod(e, get_string("audiotools_3"))
     a, b = sec.split("-")
@@ -92,18 +81,19 @@ async def trim_aud(e):
         xxx = await e.eor(get_string("audiotools_5"))
         c_time = time.time()
         file = await downloader(
-            "resources/downloads/" + name,
+            f"resources/downloads/{name}",
             vfile,
             xxx,
             c_time,
-            "Downloading " + name + "...",
+            f"Downloading {name}...",
         )
+
         o_size = os.path.getsize(file.name)
         d_time = time.time()
         diff = time_formatter((d_time - c_time) * 1000)
         file_name = (file.name).split("/")[-1]
         out = file_name.replace(file_name.split(".")[-1], "_trimmed.aac")
-        if int(b) > int(genss(file.name)):
+        if int(b) > int(await genss(file.name)):
             os.remove(file.name)
             return await eod(xxx, get_string("audiotools_6"))
         ss, dd = stdr(int(a)), stdr(int(b))
@@ -114,29 +104,14 @@ async def trim_aud(e):
         await bash(cmd)
         os.remove(file.name)
         f_time = time.time()
-        mmmm = await uploader(
-            out,
-            out,
-            f_time,
-            xxx,
-            "Uploading " + out + "...",
-        )
-        data = await metadata(out)
-        artist = data["performer"]
-        duration = data["duration"]
-        attributes = [
-            DocumentAttributeAudio(
-                duration=duration,
-                title=out.split(".")[0],
-                performer=vido.file.performer or artist,
-            )
-        ]
+        mmmm = await uploader(out, out, f_time, xxx, f"Uploading {out}...")
+        attributes = await set_attributes(out)
 
         caption = get_string("audiotools_7").format(ss, dd)
         await e.client.send_file(
             e.chat_id,
             mmmm,
-            thumb="resources/extras/ultroid.jpg",
+            thumb=ULTConfig.thumb,
             caption=caption,
             attributes=attributes,
             force_document=False,
@@ -157,45 +132,30 @@ async def ex_aud(e):
     msg = await e.eor(get_string("com_1"))
     c_time = time.time()
     file = await downloader(
-        "resources/downloads/" + name,
+        f"resources/downloads/{name}",
         vfile,
         msg,
         c_time,
-        "Downloading " + name + "...",
+        f"Downloading {name}...",
     )
-    out_file = file.name + ".aac"
+
+    out_file = f"{file.name}.aac"
     cmd = f"ffmpeg -i {file.name} -vn -acodec copy {out_file}"
     o, err = await bash(cmd)
     os.remove(file.name)
-    data = await metadata(out_file)
-    artist = data["performer"]
-    duration = data["duration"]
-    attributes = [
-        DocumentAttributeAudio(
-            duration=reply.file.duration or duration,
-            title=reply.file.name.split(".")[0]
-            if reply.file.name
-            else "Extracted Audio",
-            performer=reply.file.performer or artist,
-        )
-    ]
+    attributes = await set_attributes(out_file)
 
     f_time = time.time()
     try:
-        fo = await uploader(
-            out_file,
-            out_file,
-            f_time,
-            msg,
-            "Uploading " + out_file + "...",
-        )
+        fo = await uploader(out_file, out_file, f_time, msg, f"Uploading {out_file}...")
+
     except FileNotFoundError:
         return await eor(msg, get_string("audiotools_9"))
     await e.client.send_file(
         e.chat_id,
         fo,
         caption=get_string("audiotools_10"),
-        thumb="resources/extras/ultroid.jpg",
+        thumb=ULTConfig.thumb,
         attributes=attributes,
         reply_to=e.reply_to_msg_id,
     )

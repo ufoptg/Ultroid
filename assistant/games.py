@@ -20,10 +20,14 @@ import uuid
 from html import unescape
 from random import choice, shuffle
 
-import akinator
-from pyUltroid.functions.helper import inline_mention
-from pyUltroid.functions.tools import async_searcher
-from pyUltroid.misc._decorators import ultroid_cmd
+from . import LOGS
+
+try:
+    import akinator
+except ImportError:
+    akinator = None
+    LOGS.error("'akinator' not installed.")
+
 from telethon.errors.rpcerrorlist import (
     BotMethodInvalidError,
     ChatSendStickersForbiddenError,
@@ -31,16 +35,22 @@ from telethon.errors.rpcerrorlist import (
 from telethon.events import Raw
 from telethon.tl.types import InputMediaPoll, Poll, PollAnswer, UpdateMessagePollVote
 
+from pyUltroid._misc._decorators import ultroid_cmd
+from pyUltroid.fns.helper import inline_mention
+from pyUltroid.fns.tools import async_searcher
+
 from . import *
 
 # -------------------------- Akinator ----------------------- #
 
 games = {}
-aki_photo = "https://telegra.ph/file/3cc8825c029fd0cab9edc.jpg"
+aki_photo = "https://graph.org/file/3cc8825c029fd0cab9edc.jpg"
 
 
 @ultroid_cmd(pattern="akinator")
 async def akina(e):
+    if not akinator:
+        return
     sta = akinator.Akinator()
     games.update({e.chat_id: {e.id: sta}})
     try:
@@ -65,7 +75,7 @@ async def _akokk(e):
 
 @callback(re.compile("aki_(.*)"), owner=True)
 async def doai(e):
-    adt = e.pattern_match.group(1).decode("utf-8")
+    adt = e.pattern_match.group(1).strip().decode("utf-8")
     dt = adt.split("_")
     ch = int(dt[0])
     mid = int(dt[1])
@@ -80,7 +90,7 @@ async def doai(e):
 
     bts = [bts, cts]
     # ignored Back Button since it makes the Pagination looks Bad
-    await e.edit("Q. " + qu, buttons=bts)
+    await e.edit(f"Q. {qu}", buttons=bts)
 
 
 @callback(re.compile("aka_(.*)"), owner=True)
@@ -129,6 +139,11 @@ async def eiagx(e):
 
 # ----------------------- Main Command ------------------- #
 
+GIMAGES = [
+    "https://graph.org/file/1c51015bae5205a65fd69.jpg",
+    "https://imgwhale.xyz/3xyr322l64j9590",
+]
+
 
 @asst_cmd(pattern="startgame", owner=True)
 async def magic(event):
@@ -138,7 +153,7 @@ async def magic(event):
     ]
     await event.reply(
         get_string("games_1"),
-        file="https://telegra.ph/file/1c51015bae5205a65fd69.jpg",
+        file=choice(GIMAGES),
         buttons=buttons,
     )
 
@@ -156,10 +171,11 @@ CONGO_STICKER = [
     "CAADAgADjAADECECEFZM-SrKO9GgAg",
     "CAADAgADSwIAAj-VzArAzNCDiGWAHAI",
     "CAADAgADhQADwZxgDIuMHR9IU10iAg",
+    "CAADAgADiwMAAsSraAuoe2BwYu1sdQI",
 ]
 
 
-@callback("delit")
+@callback("delit", owner=True)
 async def delete_it(event):
     await event.delete()
 
@@ -251,7 +267,7 @@ async def choose_cata(event):
                     close_period=int(in_),
                 ),
                 correct_answers=[ansi],
-                solution="Join @TheUltroid",
+                solution="Join @TeamUltroid",
                 solution_entities=[],
             )
             m_ = await event.client.send_message(chat, file=poll)

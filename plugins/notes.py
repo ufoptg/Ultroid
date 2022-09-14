@@ -22,18 +22,19 @@
 """
 import os
 
-from pyUltroid.dB.notes_db import add_note, get_notes, list_note, rem_note
-from pyUltroid.functions.tools import create_tl_btn, format_btn, get_msg_button
 from telegraph import upload_file as uf
 from telethon.utils import pack_bot_file_id
+
+from pyUltroid.dB.notes_db import add_note, get_notes, list_note, rem_note
+from pyUltroid.fns.tools import create_tl_btn, format_btn, get_msg_button
 
 from . import events, get_string, mediainfo, udB, ultroid_bot, ultroid_cmd
 from ._inline import something
 
 
-@ultroid_cmd(pattern="addnote ?(.*)", admins_only=True)
+@ultroid_cmd(pattern="addnote( (.*)|$)", admins_only=True)
 async def an(e):
-    wrd = (e.pattern_match.group(1)).lower()
+    wrd = (e.pattern_match.group(1).strip()).lower()
     wt = await e.get_reply_message()
     chat = e.chat_id
     if not (wt and wrd):
@@ -47,14 +48,14 @@ async def an(e):
             dl = await wt.download_media()
             variable = uf(dl)
             os.remove(dl)
-            m = "https://telegra.ph" + variable[0]
+            m = f"https://graph.org{variable[0]}"
         elif wut == "video":
             if wt.media.document.size > 8 * 1000 * 1000:
                 return await e.eor(get_string("com_4"), time=5)
             dl = await wt.download_media()
             variable = uf(dl)
             os.remove(dl)
-            m = "https://telegra.ph" + variable[0]
+            m = f"https://graph.org{variable[0]}"
         else:
             m = pack_bot_file_id(wt.media)
         if wt.text:
@@ -73,9 +74,9 @@ async def an(e):
     ultroid_bot.add_handler(notes, events.NewMessage())
 
 
-@ultroid_cmd(pattern="remnote ?(.*)", admins_only=True)
+@ultroid_cmd(pattern="remnote( (.*)|$)", admins_only=True)
 async def rn(e):
-    wrd = (e.pattern_match.group(1)).lower()
+    wrd = (e.pattern_match.group(1).strip()).lower()
     chat = e.chat_id
     if not wrd:
         return await e.eor(get_string("notes_3"), time=5)
@@ -87,8 +88,7 @@ async def rn(e):
 
 @ultroid_cmd(pattern="listnote$", admins_only=True)
 async def lsnote(e):
-    x = list_note(e.chat_id)
-    if x:
+    if x := list_note(e.chat_id):
         sd = "Notes Found In This Chats Are\n\n"
         return await e.eor(sd + x)
     await e.eor(get_string("notes_5"))
@@ -97,8 +97,7 @@ async def lsnote(e):
 async def notes(e):
     xx = [z.replace("#", "") for z in e.text.lower().split() if z.startswith("#")]
     for word in xx:
-        k = get_notes(e.chat_id, word)
-        if k:
+        if k := get_notes(e.chat_id, word):
             msg = k["msg"]
             media = k["media"]
             if k.get("button"):

@@ -17,19 +17,20 @@ import glob
 import os
 import random
 
-from pyUltroid.functions.misc import unsplashsearch
-from pyUltroid.functions.tools import make_logo
 from telethon.tl.types import InputMessagesFilterPhotos
+
+from pyUltroid.fns.misc import unsplashsearch
+from pyUltroid.fns.tools import LogoHelper
 
 from . import OWNER_ID, OWNER_NAME, download_file, get_string, mediainfo, ultroid_cmd
 
 
-@ultroid_cmd(pattern="logo ?(.*)")
+@ultroid_cmd(pattern="logo( (.*)|$)")
 async def logo_gen(event):
     xx = await event.eor(get_string("com_1"))
-    name = event.pattern_match.group(1)
+    name = event.pattern_match.group(1).strip()
     if not name:
-        await xx.eor("`Give a name too!`", time=5)
+        return await xx.eor("`Give a name too!`", time=5)
     bg_, font_ = None, None
     if event.reply_to_msg_id:
         temp = await event.get_reply_message()
@@ -65,7 +66,7 @@ async def logo_gen(event):
         strke = 5
     else:
         strke = 20
-    make_logo(
+    name = LogoHelper.make_logo(
         bg_,
         name,
         font_,
@@ -73,33 +74,14 @@ async def logo_gen(event):
         stroke_width=strke,
         stroke_fill="black",
     )
-    """img = Image.open(bg_)
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(font_, fnt_size)
-    w, h = draw.textsize(name, font=font)
-    h += int(h * 0.21)
-    image_width, image_height = img.size
-    draw.text(
-        ((image_width - w) / 2, (image_height - h) / 2),
-        name,
-        font=font,
-        fill=(255, 255, 255),
-    )
-    x = (image_width - w) / 2
-    y = (image_height - h) / 2
-    draw.text(
-        (x, y), name, font=font, fill="white", stroke_width=strke, stroke_fill="black"
-    )"""
-    flnme = "Logo.png"
     await xx.edit("`Done!`")
-    if os.path.exists(flnme):
-        await event.client.send_file(
-            event.chat_id,
-            file=flnme,
-            caption=f"Logo by [{OWNER_NAME}](tg://user?id={OWNER_ID})",
-            force_document=True,
-        )
-        os.remove(flnme)
-        await xx.delete()
+    await event.client.send_file(
+        event.chat_id,
+        file=name,
+        caption=f"Logo by [{OWNER_NAME}](tg://user?id={OWNER_ID})",
+        force_document=True,
+    )
+    os.remove(name)
+    await xx.delete()
     if os.path.exists(bg_):
         os.remove(bg_)

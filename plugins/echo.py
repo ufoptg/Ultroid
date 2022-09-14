@@ -4,26 +4,20 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available
 
-•`{i}addecho <reply to anyone>`
-   Start Auto Echo message of Replied user.
+from . import get_help
 
-•`{i}remecho <reply to anyone>`
-   Turn It off
+__doc__ = get_help("help_echo")
 
-•`{i}listecho <reply to anyone>`
-   To Get list.
-"""
+
+from telethon.utils import get_display_name
 
 from pyUltroid.dB.echo_db import add_echo, check_echo, list_echo, rem_echo
-from telethon.utils import get_display_name
 
 from . import LOGS, events, ultroid_bot, ultroid_cmd
 
 
-@ultroid_cmd(pattern="addecho ?(.*)")
+@ultroid_cmd(pattern="addecho( (.*)|$)")
 async def echo(e):
     r = await e.get_reply_message()
     if r:
@@ -46,7 +40,7 @@ async def echo(e):
     await e.eor(f"Activated Echo For {user}.")
 
 
-@ultroid_cmd(pattern="remecho ?(.*)")
+@ultroid_cmd(pattern="remecho( (.*)|$)")
 async def rm(e):
     r = await e.get_reply_message()
     if r:
@@ -81,13 +75,12 @@ async def okk(e):
 
 @ultroid_cmd(pattern="listecho$")
 async def lstecho(e):
-    k = list_echo(e.chat_id)
-    if k:
+    if k := list_echo(e.chat_id):
         user = "**Activated Echo For Users:**\n\n"
         for x in k:
             ok = await e.client.get_entity(int(x))
             kk = f"[{get_display_name(ok)}](tg://user?id={ok.id})"
-            user += "•" + kk + "\n"
+            user += f"•{kk}" + "\n"
         await e.eor(user)
     else:
         await e.eor("`List is Empty, For echo`", time=5)

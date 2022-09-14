@@ -4,32 +4,21 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-• **DataBase Commands, do not use if you don't know what it is.**
 
-• `{i}setdb key | value`
-    Set Value in Database.
-    e.g :
-    `{i}setdb hi there`
-    `{i}setdb hi there | ultroid here`
+from . import get_help
 
-• `{i}deldb key`
-    Delete Key from DB.
+__doc__ = get_help("help_database")
 
-• `{i}rendb old keyname | new keyname`
-    Update Key Name
-"""
 
 import re
 
 from . import Redis, eor, get_string, udB, ultroid_cmd
 
 
-@ultroid_cmd(pattern="setdb ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="setdb( (.*)|$)", fullsudo=True)
 async def _(ult):
-    match = ult.pattern_match.group(1)
+    match = ult.pattern_match.group(1).strip()
     if not match:
         return await ult.eor("Provide key and value to set!")
     try:
@@ -37,22 +26,19 @@ async def _(ult):
         data = match.split(delim, maxsplit=1)
         if data[0] in ["--extend", "-e"]:
             data = data[1].split(maxsplit=1)
-            data[1] = str(udB.get_key(data[0])) + " " + data[1]
+            data[1] = f"{str(udB.get_key(data[0]))} {data[1]}"
         udB.set_key(data[0], data[1])
-        redisdata = Redis(data[0])
         await ult.eor(
-            "**DB Key Value Pair Updated\nKey :** `{}`\n**Value :** `{}`".format(
-                data[0],
-                redisdata,
-            ),
+            f"**DB Key Value Pair Updated\nKey :** `{data[0]}`\n**Value :** `{data[1]}`"
         )
+
     except BaseException:
         await ult.eor(get_string("com_7"))
 
 
-@ultroid_cmd(pattern="deldb ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="deldb( (.*)|$)", fullsudo=True)
 async def _(ult):
-    key = ult.pattern_match.group(1)
+    key = ult.pattern_match.group(1).strip()
     if not key:
         return await ult.eor("Give me a key name to delete!", time=5)
     _ = key.split(maxsplit=1)
@@ -70,9 +56,9 @@ async def _(ult):
         await ult.eor(get_string("com_7"))
 
 
-@ultroid_cmd(pattern="rendb ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="rendb( (.*)|$)", fullsudo=True)
 async def _(ult):
-    match = ult.pattern_match.group(1)
+    match = ult.pattern_match.group(1).strip()
     if not match:
         return await ult.eor("`Provide Keys name to rename..`")
     delim = " " if re.search("[|]", match) is None else " | "
@@ -82,11 +68,9 @@ async def _(ult):
             udB.rename(data[0], data[1])
             await eor(
                 ult,
-                "**DB Key Rename Successful\nOld Key :** `{}`\n**New Key :** `{}`".format(
-                    data[0],
-                    data[1],
-                ),
+                f"**DB Key Rename Successful\nOld Key :** `{data[0]}`\n**New Key :** `{data[1]}`",
             )
+
         except BaseException:
             await ult.eor(get_string("com_7"))
     else:

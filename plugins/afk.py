@@ -4,23 +4,19 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-• `{i}afk <optional reason>`
-    AFK means away from keyboard,
-    After u active this if Someone tag or msg u then It auto Reply Him/her,
+from . import get_help
 
-    (Note : By Reply To any media U can set media afk too).
+__doc__ = get_help("help_afk")
 
-"""
 
 import asyncio
 
-from pyUltroid.dB.afk_db import add_afk, del_afk, is_afk
-from pyUltroid.dB.pmpermit_db import is_approved
 from telegraph import upload_file as uf
 from telethon import events
+
+from pyUltroid.dB.afk_db import add_afk, del_afk, is_afk
+from pyUltroid.dB.pmpermit_db import is_approved
 
 from . import (
     LOG_CHANNEL,
@@ -37,12 +33,12 @@ from . import (
 old_afk_msg = []
 
 
-@ultroid_cmd(pattern="afk ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="afk( (.*)|$)", owner_only=True)
 async def set_afk(event):
     if event.client._bot or is_afk():
         return
     text, media, media_type = None, None, None
-    if event.pattern_match.group(1):
+    if event.pattern_match.group(1).strip():
         text = event.text.split(maxsplit=1)[1]
     reply = await event.get_reply_message()
     if reply:
@@ -53,7 +49,7 @@ async def set_afk(event):
             if media_type.startswith(("pic", "gif")):
                 file = await event.client.download_media(reply.media)
                 iurl = uf(file)
-                media = f"https://telegra.ph{iurl[0]}"
+                media = f"https://graph.org{iurl[0]}"
             else:
                 media = reply.file.id
     await event.eor("`Done`", time=2)

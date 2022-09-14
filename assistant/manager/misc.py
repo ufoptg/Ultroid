@@ -9,7 +9,9 @@
 import random
 
 import aiohttp
+
 from pyUltroid.dB import DEVLIST
+from pyUltroid.fns.admins import admin_check
 
 from . import *
 
@@ -22,10 +24,11 @@ async def dheh(e):
     await e.client.send_message(e.chat_id, text, reply_to=ri)
 
 
-@asst_cmd(pattern="echo ?(.*)")
+@asst_cmd(pattern="echo( (.*)|$)")
 async def oqha(e):
-    match = e.pattern_match.group(1)
-    if match:
+    if not await admin_check(e):
+        return
+    if match := e.pattern_match.group(1).strip():
         text = match
         reply_to = e
     elif e.is_reply:

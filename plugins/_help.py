@@ -5,8 +5,6 @@
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-
-from pyUltroid.dB._core import HELP, LIST
 from telethon.errors.rpcerrorlist import (
     BotInlineDisabledError,
     BotMethodInvalidError,
@@ -14,7 +12,10 @@ from telethon.errors.rpcerrorlist import (
 )
 from telethon.tl.custom import Button
 
-from . import HNDLR, INLINE_PIC, LOGS, OWNER_NAME, asst, get_string, udB, ultroid_cmd
+from pyUltroid.dB._core import HELP, LIST
+from pyUltroid.fns.tools import cmd_regex_replace
+
+from . import HNDLR, LOGS, OWNER_NAME, asst, get_string, inline_pic, udB, ultroid_cmd
 
 _main_help_menu = [
     [
@@ -35,9 +36,9 @@ _main_help_menu = [
 ]
 
 
-@ultroid_cmd(pattern="help ?(.*)")
+@ultroid_cmd(pattern="help( (.*)|$)")
 async def _help(ult):
-    plug = ult.pattern_match.group(1)
+    plug = ult.pattern_match.group(1).strip()
     chat = await ult.get_chat()
     if plug:
         try:
@@ -68,7 +69,40 @@ async def _help(ult):
                     x += "\n© @TeamUltroid"
                     await ult.eor(x)
                 except BaseException:
-                    await ult.eor(get_string("help_1").format(plug), time=5)
+                    file = None
+                    compare_strings = []
+                    for file_name in LIST:
+                        compare_strings.append(file_name)
+                        value = LIST[file_name]
+                        for j in value:
+                            j = cmd_regex_replace(j)
+                            compare_strings.append(j)
+                            if j.strip() == plug:
+                                file = file_name
+                                break
+                    if not file:
+                        # the enter command/plugin name is not found
+                        text = f"`{plug}` is not a valid plugin!"
+                        best_match = None
+                        for _ in compare_strings:
+                            if plug in _ and not _.startswith("_"):
+                                best_match = _
+                                break
+                        if best_match:
+                            text += f"\nDid you mean `{best_match}`?"
+                        return await ult.eor(text)
+                    output = f"**Command** `{plug}` **found in plugin** - `{file}`\n"
+                    if file in HELP["Official"]:
+                        for i in HELP["Official"][file]:
+                            output += i
+                    elif HELP.get("Addons") and file in HELP["Addons"]:
+                        for i in HELP["Addons"][file]:
+                            output += i
+                    elif HELP.get("VCBot") and file in HELP["VCBot"]:
+                        for i in HELP["VCBot"][file]:
+                            output += i
+                    output += "\n© @TeamUltroid"
+                    await ult.eor(output)
         except BaseException as er:
             LOGS.exception(er)
             await ult.eor("Error 🤔 occured.")
@@ -89,7 +123,7 @@ async def _help(ult):
                     len(HELP["Addons"] if "Addons" in HELP else []),
                     cmd,
                 ),
-                file=INLINE_PIC,
+                file=inline_pic(),
                 buttons=_main_help_menu,
             )
         except BotResponseTimeoutError:

@@ -4,21 +4,11 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-• `{i}del <reply to message>`
-    Delete the replied message.
+from . import get_help
 
-• `{i}edit <new message>`
-    Edit your last message or replied msg.
+__doc__ = get_help("extra")
 
-• `{i}copy <reply to message>`
-    Copy replied message / media.
-
-• `{i}reply`
-    Reply the last sent msg to replied user.
-"""
 import asyncio
 
 from . import get_string, ultroid_cmd
@@ -32,11 +22,8 @@ async def delete_it(delme):
     msg_src = await delme.get_reply_message()
     if not msg_src:
         return
-    try:
-        await msg_src.delete()
-        await delme.delete()
-    except Exception as e:
-        await delme.eor(f"Couldn't delete the message.\n\n**ERROR:**\n`{e}`", time=5)
+    await msg_src.try_delete()
+    await delme.try_delete()
 
 
 @ultroid_cmd(

@@ -4,29 +4,26 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-• `{i}autopic <search query>`
-    Will change your profile pic at defined intervals with pics related to the given topic.
 
-• `{i}autopic` : stop autopic if active.
-"""
 import asyncio
 import os
 import random
 from glob import glob
 from random import shuffle
 
-from pyUltroid.functions.google_image import googleimagesdownload
 from telethon.tl.functions.photos import UploadProfilePhotoRequest
 
-from . import LOGS, get_string, udB, ultroid_bot, ultroid_cmd
+from pyUltroid.fns.google_image import googleimagesdownload
+
+from . import LOGS, get_help, get_string, udB, ultroid_bot, ultroid_cmd
+
+__doc__ = get_help("help_autopic")
 
 
-@ultroid_cmd(pattern="autopic ?(.*)")
+@ultroid_cmd(pattern="autopic( (.*)|$)")
 async def autopic(e):
-    search = e.pattern_match.group(1)
+    search = e.pattern_match.group(1).strip()
     if udB.get_key("AUTOPIC") and not search:
         udB.del_key("AUTOPIC")
         return await e.eor(get_string("autopic_5"))
@@ -58,7 +55,7 @@ async def autopic(e):
             file = await e.client.upload_file(lie)
             await e.client(UploadProfilePhotoRequest(file))
             await asyncio.sleep(SLEEP_TIME)
-        shuffle(clls)
+        shuffle(ok)
 
 
 if search := udB.get_key("AUTOPIC"):
@@ -92,8 +89,11 @@ if search := udB.get_key("AUTOPIC"):
         await ultroid_bot(UploadProfilePhotoRequest(file))
         shuffle(ok)
 
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-    schedule = AsyncIOScheduler()
-    schedule.add_job(autopic_func, "interval", seconds=sleep)
-    schedule.start()
+        schedule = AsyncIOScheduler()
+        schedule.add_job(autopic_func, "interval", seconds=sleep)
+        schedule.start()
+    except ModuleNotFoundError as er:
+        LOGS.error(f"autopic: '{er.name}' not installed.")

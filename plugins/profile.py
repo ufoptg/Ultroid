@@ -34,15 +34,15 @@ TMP_DOWNLOAD_DIRECTORY = "resources/downloads/"
 # bio changer
 
 
-@ultroid_cmd(pattern="setbio ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="setbio( (.*)|$)", fullsudo=True)
 async def _(ult):
     ok = await ult.eor("...")
-    set = ult.pattern_match.group(1)
+    set = ult.pattern_match.group(1).strip()
     try:
         await ult.client(UpdateProfileRequest(about=set))
         await eod(ok, f"Profile bio changed to\n`{set}`")
     except Exception as ex:
-        await eod(ok, "Error occured.\n`{}`".format(str(ex)))
+        await eod(ok, f"Error occured.\n`{str(ex)}`")
 
 
 # name changer
@@ -51,7 +51,7 @@ async def _(ult):
 @ultroid_cmd(pattern="setname ?((.|//)*)", fullsudo=True)
 async def _(ult):
     ok = await ult.eor("...")
-    names = ult.pattern_match.group(1)
+    names = ult.pattern_match.group(1).strip()
     first_name = names
     last_name = ""
     if "//" in names:
@@ -65,7 +65,7 @@ async def _(ult):
         )
         await eod(ok, f"Name changed to `{names}`")
     except Exception as ex:
-        await eod(ok, "Error occured.\n`{}`".format(str(ex)))
+        await eod(ok, f"Error occured.\n`{str(ex)}`")
 
 
 # profile pic
@@ -86,14 +86,14 @@ async def _(ult):
             await ult.client(UploadProfilePhotoRequest(video=file))
         await eod(ok, "`My Profile Photo has Successfully Changed !`")
     except Exception as ex:
-        await eod(ok, "Error occured.\n`{}`".format(str(ex)))
+        await eod(ok, f"Error occured.\n`{str(ex)}`")
     os.remove(replfile)
 
 
 # delete profile pic(s)
 
 
-@ultroid_cmd(pattern="delpfp ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="delpfp( (.*)|$)", fullsudo=True)
 async def remove_profilepic(delpfp):
     ok = await eor(delpfp, "`...`")
     group = delpfp.text[8:]
@@ -108,10 +108,13 @@ async def remove_profilepic(delpfp):
     await eod(ok, f"`Successfully deleted {len(pfplist)} profile picture(s).`")
 
 
-@ultroid_cmd(pattern="poto ?(.*)")
+@ultroid_cmd(pattern="poto( (.*)|$)")
 async def gpoto(e):
-    ult = e.pattern_match.group(1)
+    ult = e.pattern_match.group(1).strip()
     a = await e.eor(get_string("com_1"))
+    just_dl = ult in ["-dl", "--dl"]
+    if just_dl:
+        ult = None
     if not ult:
         if e.is_reply:
             gs = await e.get_reply_message()
@@ -121,6 +124,8 @@ async def gpoto(e):
     okla = await e.client.download_profile_photo(ult)
     if not okla:
         return await eor(a, "`Pfp Not Found...`")
-    await a.delete()
-    await e.reply(file=okla)
-    os.remove(okla)
+    if not just_dl:
+        await a.delete()
+        await e.reply(file=okla)
+        return os.remove(okla)
+    await a.edit(f"Downloaded pfp to [ `{okla}` ].")

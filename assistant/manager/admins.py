@@ -7,8 +7,9 @@
 
 import re
 
-from pyUltroid import _ult_cache
 from telethon.errors.rpcerrorlist import UserNotParticipantError
+
+from pyUltroid import _ult_cache
 
 from . import *
 
@@ -22,7 +23,7 @@ async def dowj(e):
         return await e.eor("Reply to a message...")
     try:
         await replied.delete()
-        if e.pattern_match.group(1) == "kick":
+        if e.pattern_match.group(1).strip() == "kick":
             await e.client.kick_participant(e.chat_id, user)
             te = "Kicked"
         else:

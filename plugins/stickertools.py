@@ -13,9 +13,6 @@
 • `{i}tiny <reply to media>`
     To create Tiny stickers.
 
-• `{i}convert <gif/img/sticker>`
-    Reply to animated sticker to convert it into gif or image or normal sticker.
-
 • `{i}kang <reply to image/sticker>`
     Kang the sticker (add to your pack).
 
@@ -25,84 +22,102 @@
 • `{i}round <reply to any media>`
     To extract round sticker.
 """
+import glob
 import io
 import os
 import random
 from os import remove
 
-import cv2
-import numpy as np
-import requests
-from PIL import Image, ImageDraw
-from pyUltroid.functions.misc import create_quotly
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+try:
+    import numpy as np
+except ImportError:
+    np = None
+try:
+    from PIL import Image, ImageDraw
+except ImportError:
+    pass
+
 from telethon.errors import PeerIdInvalidError, YouBlockedUserError
-from telethon.tl.types import DocumentAttributeFilename, DocumentAttributeSticker
+from telethon.tl.functions.messages import UploadMediaRequest
+from telethon.tl.types import (
+    DocumentAttributeFilename,
+    DocumentAttributeSticker,
+    InputPeerSelf,
+)
 from telethon.utils import get_input_document
 
 from . import (
     KANGING_STR,
     LOGS,
     asst,
+    async_searcher,
     bash,
+    con,
     functions,
     get_string,
     inline_mention,
     mediainfo,
-    resize_photo,
+    quotly,
     types,
     udB,
     ultroid_cmd,
 )
 
 
-@ultroid_cmd(
-    pattern="convert ?(.*)",
-)
-async def uconverter(event):
-    xx = await event.eor(get_string("com_1"))
-    a = await event.get_reply_message()
-    if not (a and a.media and "animated" in mediainfo(a.media)):
-        return await event.eor(get_string("sts_2"))
-    input_ = event.pattern_match.group(1)
-    b = await a.download_media("resources/downloads/")
-    if "gif" in input_:
-        file = "something.gif"
-    elif "img" in input_:
-        file = "something.png"
-    elif "sticker" in input_:
-        file = "something.webp"
-    else:
-        return await xx.edit(get_string("sts_3").format("gif/img/sticker"))
-    await bash(f"lottie_convert.py '{b}' {file}")
-    await event.client.send_file(event.chat_id, file, force_document=False)
-    await xx.delete()
-    os.remove(file)
-    os.remove(b)
-
-
 @ultroid_cmd(pattern="packkang")
 async def pack_kangish(_):
     _e = await _.get_reply_message()
-    if not (_e and _e.sticker and _e.file.mime_type == "image/webp"):
+    local = None
+    try:
+        cmdtext = _.text.split(maxsplit=1)[1]
+    except IndexError:
+        cmdtext = None
+    if cmdtext and os.path.isdir(cmdtext):
+        local = True
+    elif not (_e and _e.sticker and _e.file.mime_type == "image/webp"):
         return await _.eor(get_string("sts_4"))
-    if len(_.text) > 9:
-        _packname = _.text.split(" ", maxsplit=1)[1]
-    else:
-        _packname = f"Ultroid Kang Pack By {_.sender_id}"
-    _id = _e.media.document.attributes[1].stickerset.id
-    _hash = _e.media.document.attributes[1].stickerset.access_hash
-    _get_stiks = await _.client(
-        functions.messages.GetStickerSetRequest(
-            stickerset=types.InputStickerSetID(id=_id, access_hash=_hash), hash=0
+    msg = await _.eor(get_string("com_1"))
+    _packname = cmdtext or f"Ultroid Kang Pack By {_.sender_id}"
+    typee = None
+    if not local:
+        _id = _e.media.document.attributes[1].stickerset.id
+        _hash = _e.media.document.attributes[1].stickerset.access_hash
+        _get_stiks = await _.client(
+            functions.messages.GetStickerSetRequest(
+                stickerset=types.InputStickerSetID(id=_id, access_hash=_hash), hash=0
+            )
         )
-    )
+        docs = _get_stiks.documents
+    else:
+        docs = []
+        files = glob.glob(cmdtext + "/*")
+        exte = files[-1]
+        if exte.endswith(".tgs"):
+            typee = "anim"
+        elif exte.endswith(".webm"):
+            typee = "vid"
+        count = 0
+        for file in files:
+            if file.endswith((".tgs", ".webm")):
+                count += 1
+                upl = await asst.upload_file(file)
+                docs.append(await asst(UploadMediaRequest(InputPeerSelf(), upl)))
+                if count % 5 == 0:
+                    await msg.edit(f"`Uploaded {count} files.`")
+
     stiks = []
-    for i in _get_stiks.documents:
+    for i in docs:
         x = get_input_document(i)
         stiks.append(
             types.InputStickerSetItem(
                 document=x,
-                emoji=(i.attributes[1]).alt,
+                emoji=random.choice(["😐", "👍", "😂"])
+                if local
+                else (i.attributes[1]).alt,
             )
         )
     try:
@@ -112,17 +127,19 @@ async def pack_kangish(_):
                 user_id=_.sender_id,
                 title=_packname,
                 short_name=f"{short_name}_by_{asst.me.username}",
+                animated=typee == "anim",
+                videos=typee == "vid",
                 stickers=stiks,
             )
         )
     except PeerIdInvalidError:
-        return await _.eor(
+        return await msg.eor(
             f"Hey {inline_mention(_.sender)} send `/start` to @{asst.me.username} and later try this command again.."
         )
     except BaseException as er:
         LOGS.exception(er)
-        return await _.eor(str(er))
-    await _.eor(
+        return await msg.eor(str(er))
+    await msg.eor(
         get_string("sts_5").format(f"https://t.me/addstickers/{_r_e_s.set.short_name}"),
     )
 
@@ -134,11 +151,11 @@ async def hehe(args):
     ultroid_bot = args.client
     xx = await args.eor(get_string("com_1"))
     user = ultroid_bot.me
-    if not user.username:
-        user.username = user.first_name
+    username = user.username
+    username = f"@{username}" if username else user.first_name
     message = await args.get_reply_message()
     photo = None
-    is_anim = False
+    is_anim, is_vid = False, False
     emoji = None
     if not message:
         return await xx.eor(get_string("sts_6"))
@@ -156,10 +173,14 @@ async def hehe(args):
 
     elif message.file and "video" in message.file.mime_type.split("/"):
         xy = await message.download_media()
-        y = cv2.VideoCapture(xy)
-        heh, lol = y.read()
-        cv2.imwrite("ult.webp", lol)
-        photo = "ult.webp"
+        if (message.file.duration or 0) <= 10:
+            is_vid = True
+            photo = await con.create_webm(xy)
+        else:
+            y = cv2.VideoCapture(xy)
+            heh, lol = y.read()
+            cv2.imwrite("ult.webp", lol)
+            photo = "ult.webp"
     elif message.file and "tgsticker" in message.file.mime_type:
         await ultroid_bot.download_file(
             message.media.document,
@@ -172,7 +193,7 @@ async def hehe(args):
         is_anim = True
         photo = 1
     elif message.message:
-        photo = await create_quotly(message)
+        photo = await quotly.create_quotly(message)
     else:
         return await xx.edit(get_string("com_4"))
     if not udB.get_key("language") or udB.get_key("language") == "en":
@@ -195,21 +216,25 @@ async def hehe(args):
                 emoji = splat[1]
 
         packname = f"ult_{user.id}_{pack}"
-        packnick = f"@{user.username}'s Pack {pack}"
+        packnick = f"{username}'s Pack {pack}"
         cmd = "/newpack"
         file = io.BytesIO()
 
-        if not is_anim:
-            image = resize_photo(photo)
-            file.name = "sticker.png"
-            image.save(file, "PNG")
-        else:
+        if is_vid:
+            packname += "_vid"
+            packnick += " (Video)"
+            cmd = "/newvideo"
+        elif is_anim:
             packname += "_anim"
             packnick += " (Animated)"
             cmd = "/newanimated"
+        else:
+            image = con.resize_photo_sticker(photo)
+            file.name = "sticker.png"
+            image.save(file, "PNG")
 
-        response = requests.get(f"http://t.me/addstickers/{packname}")
-        htmlstr = response.text.split("\n")
+        response = await async_searcher(f"http://t.me/addstickers/{packname}")
+        htmlstr = response.split("\n")
 
         if (
             "  A <strong>Telegram</strong> user has created the <strong>Sticker&nbsp;Set</strong>."
@@ -223,49 +248,56 @@ async def hehe(args):
                     await ultroid_bot(functions.contacts.UnblockRequest("stickers"))
                     await conv.send_message("/addsticker")
                 await conv.get_response()
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.send_message(packname)
                 x = await conv.get_response()
-                t = "50" if is_anim else "120"
-                while t in x.text:
+                if x.text.startswith("Alright! Now send me the video sticker."):
+                    await conv.send_file(photo, force_document=True)
+                    x = await conv.get_response()
+                t = "50" if (is_anim or is_vid) else "120"
+                while t in x.message:
                     pack += 1
                     packname = f"ult_{user.id}_{pack}"
+                    packnick = f"{username}'s Pack {pack}"
                     if is_anim:
                         packname += "_anim"
-                    packnick = f"@{user.username}'s Pack {pack}"
+                        packnick += " (Animated)"
+                    elif is_vid:
+                        packnick += " (Video)"
+                        packname += "_vid"
                     await xx.edit(get_string("sts_13").format(pack))
+                    await conv.send_message("/addsticker")
+                    await conv.get_response()
                     await conv.send_message(packname)
                     x = await conv.get_response()
-                    if x.text == "Invalid pack selected.":
+                    if x.text.startswith("Alright! Now send me the video sticker."):
+                        await conv.send_file(photo, force_document=True)
+                        x = await conv.get_response()
+                    if x.text in ["Invalid pack selected.", "Invalid set selected."]:
                         await conv.send_message(cmd)
                         await conv.get_response()
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await conv.send_message(packnick)
                         await conv.get_response()
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         if is_anim:
                             await conv.send_file("AnimatedSticker.tgs")
                             remove("AnimatedSticker.tgs")
                         else:
-                            file.seek(0)
+                            if is_vid:
+                                file = photo
+                            else:
+                                file.seek(0)
                             await conv.send_file(file, force_document=True)
                         await conv.get_response()
                         await conv.send_message(emoji)
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await conv.get_response()
                         await conv.send_message("/publish")
                         if is_anim:
                             await conv.get_response()
                             await conv.send_message(f"<{packnick}>")
                         await conv.get_response()
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await conv.send_message("/skip")
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await conv.get_response()
                         await conv.send_message(packname)
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await conv.get_response()
-                        await ultroid_bot.send_read_acknowledge(conv.chat_id)
                         await xx.edit(
                             get_string("sts_7").format(packname),
                             parse_mode="md",
@@ -274,17 +306,19 @@ async def hehe(args):
                 if is_anim:
                     await conv.send_file("AnimatedSticker.tgs")
                     remove("AnimatedSticker.tgs")
-                else:
-                    file.seek(0)
+                elif "send me an emoji" not in x.message:
+                    if is_vid:
+                        file = photo
+                    else:
+                        file.seek(0)
                     await conv.send_file(file, force_document=True)
-                rsp = await conv.get_response()
-                if "Sorry, the file type is invalid." in rsp.text:
-                    await xx.edit(
-                        get_string("sts_8"),
-                    )
-                    return
+                    rsp = await conv.get_response()
+                    if "Sorry, the file type is invalid." in rsp.text:
+                        await xx.edit(
+                            get_string("sts_8"),
+                        )
+                        return
                 await conv.send_message(emoji)
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.get_response()
                 await conv.send_message("/done")
                 await conv.get_response()
@@ -294,15 +328,16 @@ async def hehe(args):
             async with ultroid_bot.conversation("Stickers") as conv:
                 await conv.send_message(cmd)
                 await conv.get_response()
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.send_message(packnick)
                 await conv.get_response()
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 if is_anim:
                     await conv.send_file("AnimatedSticker.tgs")
                     remove("AnimatedSticker.tgs")
                 else:
-                    file.seek(0)
+                    if is_vid:
+                        file = photo
+                    else:
+                        file.seek(0)
                     await conv.send_file(file, force_document=True)
                 rsp = await conv.get_response()
                 if "Sorry, the file type is invalid." in rsp.text:
@@ -311,7 +346,6 @@ async def hehe(args):
                     )
                     return
                 await conv.send_message(emoji)
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.get_response()
                 await conv.send_message("/publish")
                 if is_anim:
@@ -319,12 +353,9 @@ async def hehe(args):
                     await conv.send_message(f"<{packnick}>")
 
                 await conv.get_response()
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.send_message("/skip")
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.get_response()
                 await conv.send_message(packname)
-                await ultroid_bot.send_read_acknowledge(conv.chat_id)
                 await conv.get_response()
                 await ultroid_bot.send_read_acknowledge(conv.chat_id)
         await xx.edit(
@@ -347,18 +378,13 @@ async def ultdround(event):
         await xx.edit(get_string("sts_10"))
         return
     ultt = await ureply.download_media()
-    if ultt.endswith(".tgs"):
-        await xx.edit(get_string("sts_9"))
-        file = "ult.png"
-        await bash(f"lottie_convert.py '{ultt}' {file}")
-    elif ultt.endswith((".gif", ".mp4", ".mkv")):
-        await xx.edit(get_string("com_1"))
-        img = cv2.VideoCapture(ultt)
-        heh, lol = img.read()
-        cv2.imwrite("ult.png", lol)
-        file = "ult.png"
-    else:
-        file = ultt
+    file = await con.convert(
+        ultt,
+        convert_to="png",
+        allowed_formats=["jpg", "jpeg", "png"],
+        outname="round",
+        remove_old=True,
+    )
     img = Image.open(file).convert("RGB")
     npImage = np.array(img)
     h, w = img.size
@@ -407,13 +433,14 @@ async def ultdestroy(event):
         .replace("[9]", "[110]")
     )
     open("json.json", "w").write(jsn)
-    await bash("lottie_convert.py json.json ultroid.tgs")
-    await event.client.send_file(
-        event.chat_id,
-        file="ultroid.tgs",
-        force_document=False,
-        reply_to=event.reply_to_msg_id,
-    )
+    file = await con.animated_sticker("json.json", "ultroid.tgs")
+    if file:
+        await event.client.send_file(
+            event.chat_id,
+            file="ultroid.tgs",
+            force_document=False,
+            reply_to=event.reply_to_msg_id,
+        )
     await xx.delete()
     os.remove("json.json")
 
@@ -427,19 +454,18 @@ async def ultiny(event):
         await event.eor(get_string("sts_10"))
         return
     xx = await event.eor(get_string("com_1"))
-    ik = await event.client.download_media(reply)
+    ik = await reply.download_media()
     im1 = Image.open("resources/extras/ultroid_blank.png")
     if ik.endswith(".tgs"):
-        await event.client.download_media(reply, "ult.tgs")
-        await bash("lottie_convert.py ult.tgs json.json")
+        await con.animated_sticker(ik, "json.json")
         with open("json.json") as json:
             jsn = json.read()
         jsn = jsn.replace("512", "2000")
         open("json.json", "w").write(jsn)
-        await bash("lottie_convert.py json.json ult.tgs")
+        await con.animated_sticker("json.json", "ult.tgs")
         file = "ult.tgs"
         os.remove("json.json")
-    elif ik.endswith((".gif", ".mp4")):
+    elif ik.endswith((".gif", ".webm", ".mp4")):
         iik = cv2.VideoCapture(ik)
         dani, busy = iik.read()
         cv2.imwrite("i.png", busy)
@@ -486,7 +512,10 @@ async def ultiny(event):
         back_im.save("o.webp", "WEBP", quality=95)
         file = "o.webp"
         os.remove("k.png")
-    await event.client.send_file(event.chat_id, file, reply_to=event.reply_to_msg_id)
+    if os.path.exists(file):
+        await event.client.send_file(
+            event.chat_id, file, reply_to=event.reply_to_msg_id
+        )
+        os.remove(file)
     await xx.delete()
-    os.remove(file)
     os.remove(ik)

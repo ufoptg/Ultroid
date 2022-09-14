@@ -8,13 +8,14 @@
 from datetime import datetime
 
 from pytz import timezone as tz
-from pyUltroid.dB.asst_fns import *
-from pyUltroid.functions.helper import inline_mention
-from pyUltroid.misc import SUDO_M, owner_and_sudos
 from telethon import Button, events
+from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError
 from telethon.utils import get_display_name
 
-from strings.strings import get_string
+from pyUltroid._misc import SUDO_M, owner_and_sudos
+from pyUltroid.dB.asst_fns import *
+from pyUltroid.fns.helper import inline_mention
+from strings import get_string
 
 from . import *
 
@@ -67,7 +68,7 @@ async def own(event):
         mention=event.sender.mention, me=inline_mention(ultroid_bot.me)
     )
     if custom_info:
-        msg += "\n\n• Powered by **@TheUltroid**"
+        msg += "\n\n• Powered by **@TeamUltroid**"
     await event.edit(
         msg,
         buttons=[Button.inline("Close", data="closeit")],
@@ -77,12 +78,15 @@ async def own(event):
 
 @callback("closeit")
 async def closet(lol):
-    await lol.delete()
+    try:
+        await lol.delete()
+    except MessageDeleteForbiddenError:
+        await lol.answer("MESSAGE_TOO_OLD", alert=True)
 
 
-@asst_cmd(pattern="start ?(.*)", forwards=False, func=lambda x: not x.is_group)
+@asst_cmd(pattern="start( (.*)|$)", forwards=False, func=lambda x: not x.is_group)
 async def ultroid(event):
-    args = event.pattern_match.group(1)
+    args = event.pattern_match.group(1).strip()
     if not is_added(event.sender_id) and event.sender_id not in owner_and_sudos():
         add_user(event.sender_id)
         kak_uiw = udB.get_key("OFF_START_LOG")

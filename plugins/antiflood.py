@@ -4,25 +4,19 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
 
-• `{i}setflood <integer>`
-    Set flood limit in a chat.
+from . import get_help
 
-• `{i}remflood`
-    Remove flood limit from a chat.
+__doc__ = get_help("help_antiflood")
 
-• `{i}getflood`
-    Get flood limit of a chat.
-"""
 
 import re
 
+from telethon.events import NewMessage as NewMsg
+
 from pyUltroid.dB import DEVLIST
 from pyUltroid.dB.antiflood_db import get_flood, get_flood_limit, rem_flood, set_flood
-from pyUltroid.functions.admins import admin_check
-from telethon.events import NewMessage as NewMsg
+from pyUltroid.fns.admins import admin_check
 
 from . import Button, Redis, asst, callback, eod, get_string, ultroid_bot, ultroid_cmd
 
@@ -46,7 +40,7 @@ if Redis("ANTIFLOOD"):
                 _check_flood[event.chat_id] = {event.sender_id: count}
         else:
             _check_flood[event.chat_id] = {event.sender_id: count}
-        if await admin_check(event, silent=True) or event.sender.bot:
+        if await admin_check(event, silent=True) or getattr(event.sender, "bot", None):
             return
         if event.sender_id in DEVLIST:
             return
@@ -93,13 +87,12 @@ async def unmuting(e):
     admins_only=True,
 )
 async def setflood(e):
-    input_ = e.pattern_match.group(1)
+    input_ = e.pattern_match.group(1).strip()
     if not input_:
         return await e.eor("`What?`", time=5)
     if not input_.isdigit():
         return await e.eor(get_string("com_3"), time=5)
-    m = set_flood(e.chat_id, input_)
-    if m:
+    if m := set_flood(e.chat_id, input_):
         return await eod(e, get_string("antiflood_4").format(input_))
 
 
@@ -123,7 +116,6 @@ async def remove_flood(e):
     admins_only=True,
 )
 async def getflood(e):
-    ok = get_flood_limit(e.chat_id)
-    if ok:
+    if ok := get_flood_limit(e.chat_id):
         return await e.eor(get_string("antiflood_5").format(ok), time=5)
     await e.eor(get_string("antiflood_2"), time=5)

@@ -17,15 +17,16 @@
     List all sudo users.
 """
 
-from pyUltroid.misc import sudoers
 from telethon.tl.types import User
+
+from pyUltroid._misc import sudoers
 
 from . import get_string, inline_mention, udB, ultroid_bot, ultroid_cmd
 
 
-@ultroid_cmd(pattern="addsudo ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="addsudo( (.*)|$)", fullsudo=True)
 async def _(ult):
-    inputs = ult.pattern_match.group(1)
+    inputs = ult.pattern_match.group(1).strip()
     if ult.reply_to_msg_id:
         replied_to = await ult.get_reply_message()
         id = replied_to.sender_id
@@ -59,13 +60,13 @@ async def _(ult):
         key = sudoers()
         key.append(id)
         udB.set_key("SUDOS", key)
-        mmm = f"**Added {name} as SUDO User**"
+        mmm = f"**Added** {name} **as SUDO User**"
     await ult.eor(mmm, time=5)
 
 
-@ultroid_cmd(pattern="delsudo ?(.*)", fullsudo=True)
+@ultroid_cmd(pattern="delsudo( (.*)|$)", fullsudo=True)
 async def _(ult):
-    inputs = ult.pattern_match.group(1)
+    inputs = ult.pattern_match.group(1).strip()
     if ult.reply_to_msg_id:
         replied_to = await ult.get_reply_message()
         id = replied_to.sender_id
@@ -94,7 +95,7 @@ async def _(ult):
         key = sudoers()
         key.remove(id)
         udB.set_key("SUDOS", key)
-        mmm = f"**Removed {name} from SUDO User(s)**"
+        mmm = f"**Removed** {name} **from SUDO User(s)**"
     await ult.eor(mmm, time=5)
 
 
@@ -117,7 +118,7 @@ async def _(ult):
             msg += f"• `{i}` -> Invalid User\n"
     m = udB.get_key("SUDO") or True
     if not m:
-        m = "[False](https://telegra.ph/Ultroid-04-06)"
+        m = "[False](https://graph.org/Ultroid-04-06)"
     return await ult.eor(
         f"**SUDO MODE : {m}\n\nList of SUDO Users :**\n{msg}", link_preview=False
     )

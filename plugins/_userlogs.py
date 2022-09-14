@@ -8,8 +8,8 @@
 import os
 import re
 
-from pyUltroid.dB.botchat_db import tag_add, who_tag
 from telethon.errors.rpcerrorlist import (
+    ChannelPrivateError,
     ChatWriteForbiddenError,
     MediaCaptionTooLongError,
     MediaEmptyError,
@@ -17,10 +17,23 @@ from telethon.errors.rpcerrorlist import (
     PeerIdInvalidError,
     UserNotParticipantError,
 )
-from telethon.tl.types import MessageEntityMention, MessageEntityMentionName
+from telethon.tl.types import MessageEntityMention, MessageEntityMentionName, User
 from telethon.utils import get_display_name
 
-from . import *
+from pyUltroid.dB.botchat_db import tag_add, who_tag
+
+from . import (
+    LOG_CHANNEL,
+    LOGS,
+    Button,
+    asst,
+    callback,
+    events,
+    get_string,
+    inline_mention,
+    udB,
+    ultroid_bot,
+)
 
 CACHE_SPAM = {}
 TAG_EDITS = {}
@@ -34,7 +47,7 @@ TAG_EDITS = {}
 )
 async def all_messages_catcher(e):
     x = await e.get_sender()
-    if isinstance(x, types.User) and (x.bot or x.verified):
+    if isinstance(x, User) and (x.bot or x.verified):
         return
     if not udB.get_key("TAG_LOG"):
         return
@@ -46,18 +59,18 @@ async def all_messages_catcher(e):
     try:
         sent = await asst.send_message(NEEDTOLOG, e.message, buttons=buttons)
         if TAG_EDITS.get(e.chat_id):
-            TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id}})
+            TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id, "msg": e}})
         else:
-            TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id}}})
+            TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id, "msg": e}}})
         tag_add(sent.id, e.chat_id, e.id)
     except MediaEmptyError:
         try:
             msg = await asst.get_messages(e.chat_id, ids=e.id)
             sent = await asst.send_message(NEEDTOLOG, msg, buttons=buttons)
             if TAG_EDITS.get(e.chat_id):
-                TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id}})
+                TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id, "msg": e}})
             else:
-                TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id}}})
+                TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id, "msg": e}}})
             tag_add(sent.id, e.chat_id, e.id)
         except Exception as me:
             if not isinstance(me, (PeerIdInvalidError, ValueError)):
@@ -69,9 +82,9 @@ async def all_messages_catcher(e):
                         NEEDTOLOG, e.message.text, file=media, buttons=buttons
                     )
                     if TAG_EDITS.get(e.chat_id):
-                        TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id}})
+                        TAG_EDITS[e.chat_id].update({e.id: {"id": sent.id, "msg": e}})
                     else:
-                        TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id}}})
+                        TAG_EDITS.update({e.chat_id: {e.id: {"id": sent.id, "msg": e}}})
                     return os.remove(media)
                 except Exception as er:
                     LOGS.exception(er)
@@ -104,15 +117,14 @@ if udB.get_key("TAG_LOG"):
     @ultroid_bot.on(events.MessageEdited(func=lambda x: not x.out))
     async def upd_edits(event):
         x = event.sender
-        if isinstance(x, types.User) and (x.bot or x.verified):
+        if isinstance(x, User) and (x.bot or x.verified):
             return
         if event.chat_id not in TAG_EDITS:
             if event.sender_id == udB.get_key("TAG_LOG"):
                 return
             if event.is_private:
                 return
-            entities = event.get_entities_text()
-            if entities:
+            if entities := event.get_entities_text():
                 is_self = False
                 username = event.client.me.username
                 if username:
@@ -141,6 +153,8 @@ if udB.get_key("TAG_LOG"):
         if not d_.get(event.id):
             return
         d_ = d_[event.id]
+        if d_["msg"].text == event.text:
+            return
         msg = None
         if d_.get("count"):
             d_["count"] += 1
@@ -164,7 +178,8 @@ if udB.get_key("TAG_LOG"):
         if d_["count"] == 10:
             TEXT += "\n\n• __Only the first 10 Edits are shown.__"
         try:
-            await MSG.edit(TEXT, buttons=await parse_buttons(event))
+            msg = await MSG.edit(TEXT, buttons=await parse_buttons(event))
+            d_["msg"] = msg
         except (MessageTooLongError, MediaCaptionTooLongError):
             del TAG_EDITS[event.chat_id][event.id]
         except Exception as er:
@@ -220,7 +235,6 @@ ultroid_bot.add_event_handler(
     when_added_or_joined,
     events.ChatAction(func=lambda x: x.user_added or x.user_joined),
 )
-
 _client = {"bot": asst, "user": ultroid_bot}
 
 
@@ -237,8 +251,18 @@ async def leave_ch_at(event):
         client = _client[client]
     except KeyError:
         return
-    name = (await client.get_entity(int(ch_id))).title
-    await client.delete_dialog(int(ch_id))
+    try:
+        name = (await client.get_entity(int(ch_id))).title
+        await client.delete_dialog(int(ch_id))
+    except UserNotParticipantError:
+        pass
+    except ChannelPrivateError:
+        return await event.edit(
+            "`[CANT_ACCESS_CHAT]` `Maybe already left or got banned.`"
+        )
+    except Exception as er:
+        LOGS.exception(er)
+        return await event.answer(str(er))
     await event.edit(get_string("userlogs_5").format(name))
 
 
@@ -252,7 +276,7 @@ async def parse_buttons(event):
     where_n, who_n = get_display_name(y), get_display_name(x)
     where_l = event.message_link
     buttons = [[Button.url(where_n, where_l)]]
-    if isinstance(x, types.User) and x.username:
+    if isinstance(x, User) and x.username:
         try:
             buttons.append(
                 [Button.mention(who_n, await asst.get_input_entity(x.username))]

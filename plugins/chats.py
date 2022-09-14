@@ -4,33 +4,10 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
-"""
-✘ Commands Available -
+from . import get_help
 
-• `{i}delchat <optional- username/id>`
-    Delete the group this cmd is used in.
+__doc__ = get_help("help_chats")
 
-• `{i}getlink`
-    Get link of group this cmd is used in.
-
-• `{i}create (g|b|c) <group_name> ; <optional-username>`
-    Create group woth a specific name.
-    g - megagroup/supergroup
-    b - small group
-    c - channel
-
-• `{i}setgpic <reply to Photo><chat username>`
-    Set Profile photo of Group.
-
-• `{i}delgpic <chat username -optional>`
-    Delete Profile photo of Group.
-
-• `{i}unbanall`
-    Unban all Members of a group.
-
-• `{i}rmusers`
-    Remove users specifically.
-"""
 
 from telethon.errors import ChatAdminRequiredError as no_admin
 from telethon.tl.functions.channels import (
@@ -56,7 +33,7 @@ from telethon.tl.types import (
     UserStatusRecently,
 )
 
-from . import HNDLR, LOGS, asst, get_string, mediainfo, os, types, udB, ultroid_cmd
+from . import HNDLR, LOGS, asst, con, get_string, mediainfo, os, types, udB, ultroid_cmd
 
 
 @ultroid_cmd(
@@ -82,41 +59,71 @@ async def _(e):
 
 
 @ultroid_cmd(
-    pattern="getlink$",
+    pattern="getlink( (.*)|$)",
     groups_only=True,
     manager=True,
 )
 async def _(e):
     reply = await e.get_reply_message()
+    match = e.pattern_match.group(1).strip()
     if reply and not isinstance(reply.sender, User):
         chat = await reply.get_sender()
     else:
         chat = await e.get_chat()
     if hasattr(chat, "username") and chat.username:
         return await e.eor(f"Username: @{chat.username}")
-    if isinstance(chat, types.Chat):
-        FC = await e.client(GetFullChatRequest(chat.id))
-    elif isinstance(chat, types.Channel):
-        FC = await e.client(GetFullChannelRequest(chat.id))
-    Inv = FC.full_chat.exported_invite
-    if Inv and not Inv.revoked:
-        link = Inv.link
-    else:
+    request, usage, title, link = None, None, None, None
+    if match:
+        split = match.split(maxsplit=1)
+        request = split[0] in ["r", "request"]
+        title = "Created by Ultroid"
+        if len(split) > 1:
+            match = split[1]
+            spli = match.split(maxsplit=1)
+            if spli[0].isdigit():
+                usage = int(spli[0])
+            if len(spli) > 1:
+                title = spli[1]
+        elif not request:
+            if match.isdigit():
+                usage = int(match)
+            else:
+                title = match
+        if request and usage:
+            usage = 0
+    if request or title:
         try:
             r = await e.client(
-                ExportChatInviteRequest(e.chat_id),
+                ExportChatInviteRequest(
+                    e.chat_id,
+                    request_needed=request,
+                    usage_limit=usage,
+                    title=title,
+                ),
             )
         except no_admin:
             return await e.eor(get_string("chats_2"), time=10)
         link = r.link
-    await e.eor(f"Link:- {link}")
+    else:
+        if isinstance(chat, types.Chat):
+            FC = await e.client(GetFullChatRequest(chat.id))
+        elif isinstance(chat, types.Channel):
+            FC = await e.client(GetFullChannelRequest(chat.id))
+        else:
+            return
+        Inv = FC.full_chat.exported_invite
+        if Inv and not Inv.revoked:
+            link = Inv.link
+    if link:
+        return await e.eor(f"Link:- {link}")
+    await e.eor("`Failed to getlink!\nSeems like link is inaccessible to you...`")
 
 
 @ultroid_cmd(
     pattern="create (b|g|c)(?: |$)(.*)",
 )
 async def _(e):
-    type_of_group = e.pattern_match.group(1)
+    type_of_group = e.pattern_match.group(1).strip()
     group_name = e.pattern_match.group(2)
     username = None
     if " ; " in group_name:
@@ -157,7 +164,7 @@ async def _(e):
             created_chat_id = r.chats[0].id
             if username:
                 await e.client(UpdateUsernameRequest(created_chat_id, username))
-                result = "https://t.me/" + username
+                result = f"https://t.me/{username}"
             else:
                 result = (
                     await e.client(
@@ -178,12 +185,12 @@ async def _(e):
 
 
 @ultroid_cmd(
-    pattern="setgpic ?(.*)", admins_only=True, manager=True, require="change_info"
+    pattern="setgpic( (.*)|$)", admins_only=True, manager=True, require="change_info"
 )
 async def _(ult):
     if not ult.is_reply:
         return await ult.eor("`Reply to a Media..`", time=5)
-    match = ult.pattern_match.group(1)
+    match = ult.pattern_match.group(1).strip()
     if not ult.client._bot and match:
         try:
             chat = await ult.client.parse_id(match)
@@ -191,28 +198,36 @@ async def _(ult):
             return await ult.eor(str(ok))
     else:
         chat = ult.chat_id
-    reply_message = await ult.get_reply_message()
-    if reply_message.media:
-        replfile = await reply_message.download_media()
+    reply = await ult.get_reply_message()
+    if reply.photo or reply.sticker or reply.video:
+        replfile = await reply.download_media()
+    elif reply.document and reply.document.thumbs:
+        replfile = await reply.download_media(thumb=-1)
     else:
         return await ult.eor("Reply to a Photo or Video..")
+    mediain = mediainfo(reply.media)
+    if "animated" in mediain:
+        replfile = await con.convert(replfile, convert_to="mp4")
+    else:
+        replfile = await con.convert(
+            replfile, outname="chatphoto", allowed_formats=["jpg", "png", "mp4"]
+        )
     file = await ult.client.upload_file(replfile)
-    mediain = mediainfo(reply_message.media)
     try:
         if "pic" not in mediain:
             file = types.InputChatUploadedPhoto(video=file)
         await ult.client(EditPhotoRequest(chat, file))
         await ult.eor("`Group Photo has Successfully Changed !`", time=5)
     except Exception as ex:
-        await ult.eor("Error occured.\n`{}`".format(str(ex)), time=5)
+        await ult.eor(f"Error occured.\n`{str(ex)}`", time=5)
     os.remove(replfile)
 
 
 @ultroid_cmd(
-    pattern="delgpic ?(.*)", admins_only=True, manager=True, require="change_info"
+    pattern="delgpic( (.*)|$)", admins_only=True, manager=True, require="change_info"
 )
 async def _(ult):
-    match = ult.pattern_match.group(1)
+    match = ult.pattern_match.group(1).strip()
     chat = ult.chat_id
     if not ult.client._bot and match:
         chat = match
@@ -245,14 +260,14 @@ async def _(event):
 
 
 @ultroid_cmd(
-    pattern="rmusers ?(.*)",
+    pattern="rmusers( (.*)|$)",
     groups_only=True,
     admins_only=True,
     fullsudo=True,
 )
 async def _(event):
     xx = await event.eor(get_string("com_1"))
-    input_str = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(1).strip()
     p, a, b, c, d, m, n, y, w, o, q, r = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     async for i in event.client.iter_participants(event.chat_id):
         p += 1  # Total Count

@@ -32,8 +32,6 @@
 import os
 from re import compile
 
-from pyUltroid.functions.helper import numerize
-from pyUltroid.functions.misc import create_instagram_client
 from telethon.errors.rpcerrorlist import ChatSendInlineForbiddenError
 from telethon.tl.types import (
     DocumentAttributeFilename,
@@ -41,6 +39,9 @@ from telethon.tl.types import (
     MessageMediaWebPage,
     WebPage,
 )
+
+from pyUltroid.fns.helper import numerize
+from pyUltroid.fns.misc import create_instagram_client
 
 from . import (
     LOGS,
@@ -55,9 +56,9 @@ from . import (
 )
 
 
-@ultroid_cmd(pattern="instadl ?(.*)")
+@ultroid_cmd(pattern="instadl( (.*)|$)")
 async def insta_dl(e):
-    match = e.pattern_match.group(1)
+    match = e.pattern_match.group(1).strip()
     replied = await e.get_reply_message()
     tt = await e.eor(get_string("com_1"))
     if match:
@@ -102,26 +103,21 @@ async def insta_dl(e):
     if isinstance(e.media, MessageMediaWebPage) and isinstance(
         e.media.webpage, WebPage
     ):
-        photo = e.media.webpage.photo or e.media.webpage.document
-        if not photo:
-            return await eor(
-                tt,
-                "Please Fill `INSTA_USERNAME` and `INSTA_PASSWORD` to Use This Comamand!",
+        if photo := e.media.webpage.photo or e.media.webpage.document:
+            await tt.delete()
+            return await e.reply(
+                f"**Link** :{text}\n\nIf This Wasnt Excepted Result, Please Fill `INSTA_USERNAME` and `INSTA_PASSWORD`...",
+                file=photo,
             )
-        await tt.delete()
-        return await e.reply(
-            f"**Link** :{text}\n\nIf This Wasnt Excepted Result, Please Fill `INSTA_USERNAME` and `INSTA_PASSWORD`...",
-            file=photo,
-        )
-    await eor(tt, "Please Fill Instagram Credential to Use this Command...")
+    # await eor(tt, "Please Fill Instagram Credential to Use this Command...")
 
 
-@ultroid_cmd(pattern="instadata ?(.*)")
+@ultroid_cmd(pattern="instadata( (.*)|$)")
 async def soon_(e):
     cl = await create_instagram_client(e)
     if not cl:
         return
-    match = e.pattern_match.group(1)
+    match = e.pattern_match.group(1).strip()
     ew = await e.eor(get_string("com_1"))
     if match:
         try:
@@ -133,7 +129,7 @@ async def soon_(e):
         data = cl.account_info()
         data = cl.user_info(data.pk)
     photo = data.profile_pic_url
-    unam = "https://instagram.com/" + data.username
+    unam = f"https://instagram.com/{data.username}"
     msg = f"• **Full Name** : __{data.full_name}__"
     if hasattr(data, "biography") and data.biography:
         msg += f"\n• **Bio** : `{data.biography}`"
@@ -152,14 +148,14 @@ async def soon_(e):
     await ew.delete()
 
 
-@ultroid_cmd(pattern="(instaul|reels|igtv) ?(.*)")
+@ultroid_cmd(pattern="(instaul|reels|igtv)( (.*)|$)")
 async def insta_karbon(event):
     cl = await create_instagram_client(event)
     if not cl:
-        return await event.eor("`Please Fill Instagram Credentials to Use This...`")
+        return
     msg = await event.eor(get_string("com_1"))
     replied = await event.get_reply_message()
-    type_ = event.pattern_match.group(1)
+    type_ = event.pattern_match.group(1).strip()
     if not (replied and (replied.photo or replied.video)):
         return await event.eor("`Reply to Photo Or Video...`")
     caption = (
@@ -209,8 +205,8 @@ async def insta_karbon(event):
 
 @in_pattern("instp-(.*)", owner=True)
 async def instapl(event):
-    match = event.pattern_match.group(1).split("_")
-    uri = "https://instagram.com/p/" + match[0]
+    match = event.pattern_match.group(1).strip().split("_")
+    uri = f"https://instagram.com/p/{match[0]}"
     await event.answer(
         [
             await event.builder.article(
@@ -218,7 +214,7 @@ async def instapl(event):
                 text="**Uploaded on Instagram**",
                 buttons=[
                     Button.url("•View•", uri),
-                    Button.inline("•Delete•", "instd" + match[1]),
+                    Button.inline("•Delete•", f"instd{match[1]}"),
                 ],
             )
         ]
@@ -234,7 +230,7 @@ async def dele_post(event):
     try:
         CL.media_delete(event.data_match.group(1).decode("utf-8"))
     except Exception as er:
-        return await event.edit("ERROR: " + str(er))
+        return await event.edit(f"ERROR: {str(er)}")
     await event.edit("**• Deleted!**")
 
 
