@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -25,7 +25,8 @@ AST_PLUGINS = {}
 async def setit(event, name, value):
     try:
         udB.set_key(name, value)
-    except BaseException:
+    except BaseException as er:
+        LOGS.exception(er)
         return await event.edit("`Something Went Wrong`")
 
 

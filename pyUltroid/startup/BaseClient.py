@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -33,13 +33,13 @@ class UltroidClient(TelegramClient):
         udB=None,
         logger: Logger = LOGS,
         log_attempt=True,
-        handle_auth_error=True,
+        exit_on_error=True,
         *args,
         **kwargs,
     ):
         self._cache = {}
         self._dialogs = []
-        self._handle_error = handle_auth_error
+        self._handle_error = exit_on_error
         self._log_at = log_attempt
         self.logger = logger
         self.udB = udB
@@ -74,7 +74,7 @@ class UltroidClient(TelegramClient):
             if self._handle_error:
                 self.logger.critical("String session expired. Create new!")
                 return sys.exit()
-            raise er
+            self.logger.critical("String session expired.")
         except (AccessTokenExpiredError, AccessTokenInvalidError):
             # AccessTokenError can only occur for Bot account
             # And at Early Process, Its saved in DB.
@@ -92,6 +92,7 @@ class UltroidClient(TelegramClient):
             me = self.full_name
         if self._log_at:
             self.logger.info(f"Logged in as {me}")
+        self._bot = await self.is_bot()
 
     async def fast_uploader(self, file, **kwargs):
         """Upload files in a faster way"""
@@ -114,7 +115,7 @@ class UltroidClient(TelegramClient):
         by_bot = self._bot
         size = os.path.getsize(file)
         # Don't show progress bar when file size is less than 5MB.
-        if size < 5 * 2**20:
+        if size < 5 * 2 ** 20:
             show_progress = False
         if use_cache and self._cache and self._cache.get("upload_cache"):
             for files in self._cache["upload_cache"]:
@@ -170,11 +171,11 @@ class UltroidClient(TelegramClient):
         """Download files in a faster way"""
         # Set to True and pass event to show progress bar.
         show_progress = kwargs.get("show_progress", False)
-        filename = kwargs.get("filename", None)
+        filename = kwargs.get("filename", "")
         if show_progress:
             event = kwargs["event"]
         # Don't show progress bar when file size is less than 10MB.
-        if file.size < 10 * 2**20:
+        if file.size < 10 * 2 ** 20:
             show_progress = False
         import mimetypes
 

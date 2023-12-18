@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -35,14 +35,12 @@ import os
 import time
 from datetime import datetime as dt
 from random import choice
-from shutil import rmtree
 
 import pytz
 from bs4 import BeautifulSoup as bs
 from telethon.tl.types import DocumentAttributeVideo
 
-from pyUltroid.fns.google_image import googleimagesdownload
-from pyUltroid.fns.tools import metadata
+from pyUltroid.fns.tools import get_google_images, metadata
 
 from . import (
     HNDLR,
@@ -210,7 +208,7 @@ async def hbd(event):
     elif month == "09":
         sign = "Virgo" if (day < 23) else "Libra"
     elif month == "10":
-        sign = "Libra" if (day < 23) else "Scorpion"
+        sign = "Libra" if (day < 23) else "Scorpio"
     elif month == "11":
         sign = "Scorpio" if (day < 22) else "Sagittarius"
     elif month == "12":
@@ -284,17 +282,9 @@ async def wall(event):
         return await event.eor("`Give me something to search..`")
     nn = await event.eor(get_string("com_1"))
     query = f"hd {inp}"
-    gi = googleimagesdownload()
-    args = {
-        "keywords": query,
-        "limit": 10,
-        "format": "jpg",
-        "output_directory": "./resources/downloads/",
-    }
-    await gi.download(args)
-    xx = choice(os.listdir(os.path.abspath(f"./resources/downloads/{query}/")))
-    await event.client.send_file(event.chat_id, f"./resources/downloads/{query}/{xx}")
-    rmtree(f"./resources/downloads/{query}/")
+    images = await get_google_images(query)
+    for z in range(5):
+        await event.client.send_file(event.chat_id, file=images[z]["original"])
     await nn.delete()
 
 

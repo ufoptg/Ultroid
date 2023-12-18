@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -44,6 +44,5 @@ async def _(e):
             except BaseException:
                 title = get_string("clan_3")
             o += f"{x} {title}\n"
-        await e.eor(o)
-    else:
-        await e.eor(get_string("clan_4"), time=5)
+        return await e.eor(o)
+    await e.eor(get_string("clan_4"), time=5)

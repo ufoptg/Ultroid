@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -58,9 +58,8 @@ async def uri_poll(e):
         return await e.eor("`Options Should be More than 1..`", time=5)
     m = await e.eor(get_string("com_1"))
     OUT = [PollAnswer(option[on], str(on).encode()) for on in range(len(option))]
-    await e.client.send_file(
-        e.chat_id,
-        InputMediaPoll(
+    await e.respond(
+        file=InputMediaPoll(
             Poll(20, ques, OUT, multiple_choice=mpp, public_voters=publ, quiz=quizo),
             correct_answers=karzo,
         ),

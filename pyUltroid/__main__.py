@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -13,16 +13,22 @@ def main():
     import sys
     import time
 
-    from .fns.helper import time_formatter, updater, bash
+    from .fns.helper import bash, time_formatter, updater
     from .startup.funcs import (
         WasItRestart,
         autopilot,
         customize,
+        fetch_ann,
         plug,
         ready,
         startup_stuff,
     )
     from .startup.loader import load_other_plugins
+
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    except ImportError:
+        AsyncIOScheduler = None
 
     # Option to Auto Update On Restarts..
     if (
@@ -32,7 +38,7 @@ def main():
     ):
         ultroid_bot.run_in_loop(bash("bash installer.sh"))
 
-        os.execl(sys.executable, "python3", "-m", "pyUltroid")
+        os.execl(sys.executable, sys.executable, "-m", "pyUltroid")
 
     ultroid_bot.run_in_loop(startup_stuff())
 
@@ -62,7 +68,7 @@ def main():
 
     suc_msg = """
             ----------------------------------------------------------------------
-                Ultroid has been deployed! Visit @TeamUltroid for updates!!
+                Ultroid has been deployed! Visit @TheUltroid for updates!!
             ----------------------------------------------------------------------
     """
 
@@ -79,6 +85,12 @@ def main():
     # Send/Ignore Deploy Message..
     if not udB.get_key("LOG_OFF"):
         ultroid_bot.run_in_loop(ready())
+
+    # TODO: Announcement API IS DOWN
+    # if AsyncIOScheduler:
+    #     scheduler = AsyncIOScheduler()
+    #     scheduler.add_job(fetch_ann, "interval", minutes=12 * 60)
+    #     scheduler.start()
 
     # Edit Restarting Message (if It's restarting)
     ultroid_bot.run_in_loop(WasItRestart(udB))

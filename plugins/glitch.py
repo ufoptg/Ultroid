@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -35,7 +35,7 @@ async def _(e):
     else:
         return await xx.eor(get_string("com_4"))
     cmd = f"glitch_me gif --line_count 200 -f 10 -d 50 '{ok}' ult.gif"
-    stdout, stderr = await bash(cmd)
+    await bash(cmd)
     await e.reply(file="ult.gif", force_document=False)
     await xx.delete()
     os.remove(ok)

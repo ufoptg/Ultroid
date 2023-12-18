@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -36,7 +36,7 @@ async def size(e):
 
 
 @ultroid_cmd(pattern="resize( (.*)|$)")
-async def size(e):
+async def resize(e):
     r = await e.get_reply_message()
     if not (r and r.media):
         return await e.eor(get_string("ascii_1"))

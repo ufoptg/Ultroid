@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -10,14 +10,7 @@
 
 import math
 
-from ..exceptions import TelethonMissingError
-
-try:
-    from telethon.tl import functions, types
-except ImportError:
-    raise TelethonMissingError(
-        f"'Telethon is not Installed!'\nfunctions present in '{__name__}' needs telethon to be installed!"
-    )
+from telethon.tl import functions, types
 
 from .. import LOGS
 

@@ -1,11 +1,11 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-
+import ast
 import asyncio
 import re
 import sys
@@ -289,7 +289,8 @@ async def update(eve):
             heroku = heroku3.from_key(heroku_api)
             heroku_app = None
             heroku_applications = heroku.apps()
-        except BaseException:
+        except BaseException as er:
+            LOGS.exception(er)
             return await eve.edit("`Wrong HEROKU_API.`")
         for app in heroku_applications:
             if app.name == app_name:
@@ -425,9 +426,12 @@ async def convo_handler(event: events.CallbackQuery):
     back = get_["back"]
     async with event.client.conversation(event.sender_id) as conv:
         await conv.send_message(get_["text"])
-        response = conv.wait_event(events.NewMessage(chats=event.sender_id))
-        response = await response
-        themssg = response.message.message
+        response = await conv.get_response()
+        themssg = response.message
+        try:
+            themssg = ast.literal_eval(themssg)
+        except Exception:
+            pass
         if themssg == "/cancel":
             return await conv.send_message(
                 "Cancelled!!",
@@ -807,14 +811,14 @@ async def media(event):
         )
         response = await conv.get_response()
         try:
-            themssg = response.message.message
+            themssg = response.message
             if themssg == "/cancel":
                 return await conv.send_message(
                     "Operation cancelled!!",
                     buttons=get_back_button("cbs_alvcstm"),
                 )
-        except BaseException:
-            pass
+        except BaseException as er:
+            LOGS.exception(er)
         if (
             not (response.text).startswith("/")
             and response.text != ""
@@ -829,7 +833,8 @@ async def media(event):
                 x = upl(media)
                 url = f"https://graph.org/{x[0]}"
                 remove(media)
-            except BaseException:
+            except BaseException as er:
+                LOGS.exception(er)
                 return await conv.send_message(
                     "Terminated.",
                     buttons=get_back_button("cbs_alvcstm"),
@@ -848,7 +853,8 @@ async def dell(event):
         return await event.edit(
             get_string("clst_5"), buttons=get_back_button("cbs_alabs_vcstm")
         )
-    except BaseException:
+    except BaseException as er:
+        LOGS.exception(er)
         return await event.edit(
             get_string("clst_4"),
             buttons=get_back_button("cbs_alabs_vcstm"),
@@ -944,14 +950,14 @@ async def media(event):
         )
         response = await conv.get_response()
         try:
-            themssg = response.message.message
+            themssg = response.message
             if themssg == "/cancel":
                 return await conv.send_message(
                     "Operation cancelled!!",
                     buttons=get_back_button("cbs_pmcstm"),
                 )
-        except BaseException:
-            pass
+        except BaseException as er:
+            LOGS.exception(er)
         media = await event.client.download_media(response, "pmpc")
         if (
             not (response.text).startswith("/")
@@ -966,7 +972,8 @@ async def media(event):
                 x = upl(media)
                 url = f"https://graph.org/{x[0]}"
                 remove(media)
-            except BaseException:
+            except BaseException as er:
+                LOGS.exception(er)
                 return await conv.send_message(
                     "Terminated.",
                     buttons=get_back_button("cbs_pmcstm"),
@@ -985,7 +992,8 @@ async def dell(event):
         return await event.edit(
             get_string("clst_5"), buttons=get_back_button("cbs_pmcstm")
         )
-    except BaseException:
+    except BaseException as er:
+        LOGS.exception(er)
         return await event.edit(
             get_string("clst_4"),
             buttons=[[Button.inline("« Sᴇᴛᴛɪɴɢs", data="setter")]],
@@ -1010,7 +1018,8 @@ async def apof(event):
             "Done! AUTOAPPROVE Stopped!!",
             buttons=[[Button.inline("« Bᴀᴄᴋ", data="cbs_apauto")]],
         )
-    except BaseException:
+    except BaseException as er:
+        LOGS.exception(er)
         return await event.edit(
             get_string("clst_4"),
             buttons=[[Button.inline("« Sᴇᴛᴛɪɴɢs", data="setter")]],
@@ -1052,7 +1061,8 @@ async def pmlogof(event):
             "Done! PMLOGGER Stopped!!",
             buttons=[[Button.inline("« Bᴀᴄᴋ", data="pml")]],
         )
-    except BaseException:
+    except BaseException as er:
+        LOGS.exception(er)
         return await event.edit(
             get_string("clst_4"),
             buttons=[[Button.inline("« Sᴇᴛᴛɪɴɢs", data="setter")]],
@@ -1175,7 +1185,7 @@ async def name(event):
 async def chon(event):
     var = "PMBOT"
     await setit(event, var, "True")
-    Loader(path="assistant/pmbot.py", key="PM Bot").load_single()
+    Loader(path="assistant/pmbot.py", key="PM Bot").load()
     if AST_PLUGINS.get("pmbot"):
         for i, e in AST_PLUGINS["pmbot"]:
             event.client.remove_event_handler(i)
@@ -1212,14 +1222,14 @@ async def media(event):
         )
         response = await conv.get_response()
         try:
-            themssg = response.message.message
+            themssg = response.message
             if themssg == "/cancel":
                 return await conv.send_message(
                     "Operation cancelled!!",
                     buttons=get_back_button("setter"),
                 )
-        except BaseException:
-            pass
+        except BaseException as er:
+            LOGS.exception(er)
         media = await event.client.download_media(response, "inlpic")
         if (
             not (response.text).startswith("/")
@@ -1232,7 +1242,8 @@ async def media(event):
                 x = upl(media)
                 url = f"https://graph.org/{x[0]}"
                 remove(media)
-            except BaseException:
+            except BaseException as er:
+                LOGS.exception(er)
                 return await conv.send_message(
                     "Terminated.",
                     buttons=get_back_button("setter"),

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -30,8 +30,9 @@ DC_IPV4 = {
 }
 
 
-def validate_session(session, logger=LOGS):
+def validate_session(session, logger=LOGS, _exit=True):
     from strings import get_string
+
     if session:
         # Telethon Session
         if session.startswith(CURRENT_VERSION):
@@ -39,18 +40,18 @@ def validate_session(session, logger=LOGS):
                 logger.exception(get_string("py_c1"))
                 sys.exit()
             return StringSession(session)
+
         # Pyrogram Session
         elif len(session) in _PYRO_FORM.keys():
+            data_ = struct.unpack(
+                _PYRO_FORM[len(session)],
+                base64.urlsafe_b64decode(session + "=" * (-len(session) % 4)),
+            )
             if len(session) in [351, 356]:
-                dc_id, _, auth_key, _, _ = struct.unpack(
-                    _PYRO_FORM[len(session)],
-                    base64.urlsafe_b64decode(session + "=" * (-len(session) % 4)),
-                )
+                auth_id = 2
             else:
-                dc_id, _, _, auth_key, _, _ = struct.unpack(
-                    _PYRO_FORM[len(session)],
-                    base64.urlsafe_b64decode(session + "=" * (-len(session) % 4)),
-                )
+                auth_id = 3
+            dc_id, auth_key = data_[0], data_[auth_id]
             return StringSession(
                 CURRENT_VERSION
                 + base64.urlsafe_b64encode(
@@ -63,19 +64,26 @@ def validate_session(session, logger=LOGS):
                     )
                 ).decode("ascii")
             )
+        else:
+            logger.exception(get_string("py_c1"))
+            if _exit:
+                sys.exit()
     logger.exception(get_string("py_c2"))
-    sys.exit()
+    if _exit:
+        sys.exit()
 
 
 def vc_connection(udB, ultroid_bot):
     from strings import get_string
+
     VC_SESSION = Var.VC_SESSION or udB.get_key("VC_SESSION")
     if VC_SESSION and VC_SESSION != Var.SESSION:
+        LOGS.info("Starting up VcClient.")
         try:
             return UltroidClient(
-                validate_session(VC_SESSION, LOGS),
+                validate_session(VC_SESSION, _exit=False),
                 log_attempt=False,
-                handle_auth_error=False,
+                exit_on_error=False,
             )
         except (AuthKeyDuplicatedError, EOFError):
             LOGS.info(get_string("py_c3"))

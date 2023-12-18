@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -57,14 +57,12 @@ async def lsnote(e):
 
 async def blacklist(e):
     if x := get_blacklist(e.chat_id):
-        for z in e.text.lower().split():
-            for zz in x:
-                if z == zz:
-                    try:
-                        await e.delete()
-                        break
-                    except BaseException:
-                        break
+        text = e.text.lower().split()
+        if any((z in text) for z in x):
+            try:
+                await e.delete()
+            except BaseException:
+                pass
 
 
 if udB.get_key("BLACKLIST_DB"):

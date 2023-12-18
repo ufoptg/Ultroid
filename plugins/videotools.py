@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -91,7 +91,7 @@ async def gen_shots(e):
         if not pic:
             text = "`Failed to Take Screenshots..`"
             pic = None
-        await e.client.send_message(e.chat_id, text, file=pic)
+        await e.respond(text, file=pic)
         await bash("rm -rf ss")
         await xxx.delete()
 

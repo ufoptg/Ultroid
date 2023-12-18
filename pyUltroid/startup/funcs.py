@@ -1,15 +1,18 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://github.com/TeamUltroid/pyUltroid/blob/main/LICENSE>.
 
 import asyncio
-import os, shutil
+import os
 import random
+import shutil
 import time
 from random import randint
+
+from ..configs import Var
 
 try:
     from pytz import timezone
@@ -38,7 +41,7 @@ from telethon.tl.types import (
     InputMessagesFilterDocument,
 )
 from telethon.utils import get_peer_id
-
+from decouple import config, RepositoryEnv
 from .. import LOGS, ULTConfig
 from ..fns.helper import download_file, inline_mention, updater
 
@@ -46,7 +49,7 @@ db_url = 0
 
 
 async def autoupdate_local_database():
-    from .. import asst, udB, ultroid_bot, Var
+    from .. import Var, asst, udB, ultroid_bot
 
     global db_url
     db_url = (
@@ -86,10 +89,18 @@ async def autoupdate_local_database():
 def update_envs():
     """Update Var. attributes to udB"""
     from .. import udB
-
-    for envs in list(os.environ):
-        if envs in ["LOG_CHANNEL", "BOT_TOKEN"] or envs in udB.keys():
-            udB.set_key(envs, os.environ[envs])
+    _envs = [*list(os.environ)]
+    if ".env" in os.listdir("."):
+        [_envs.append(_) for _ in list(RepositoryEnv(config._find_file(".")).data)]
+    for envs in _envs:
+        if (
+            envs in ["LOG_CHANNEL", "BOT_TOKEN", "BOTMODE", "DUAL_MODE", "language"]
+            or envs in udB.keys()
+        ):
+            if _value := os.environ.get(envs):
+                udB.set_key(envs, _value)
+            else:
+                udB.set_key(envs, config.config.get(envs))
 
 
 async def startup_stuff():
@@ -256,7 +267,7 @@ async def autopilot():
         new_channel = True
         chat = r.chats[0]
         channel = get_peer_id(chat)
-        udB.set_key("LOG_CHANNEL", str(channel))
+        udB.set_key("LOG_CHANNEL", channel)
     assistant = True
     try:
         await ultroid_bot.get_permissions(int(channel), asst.me.username)
@@ -302,7 +313,7 @@ async def autopilot():
                 LOGS.info("Error while promoting assistant in Log Channel..")
                 LOGS.exception(er)
     if isinstance(chat.photo, ChatPhotoEmpty):
-        photo = await download_file(
+        photo, _ = await download_file(
             "https://graph.org/file/27c6812becf6f376cbb10.jpg", "channelphoto.jpg"
         )
         ll = await ultroid_bot.upload_file(photo)
@@ -340,7 +351,7 @@ async def customize():
             ]
         )
         if not os.path.exists(file):
-            file = await download_file(file, "profile.jpg")
+            file, _ = await download_file(file, "profile.jpg")
             rem = True
         msg = await asst.send_message(
             chat_id, "**Auto Customisation** Started on @Botfather"
@@ -410,12 +421,12 @@ async def plug(plugin_channels):
                     if x.text == "#IGNORE":
                         continue
                     plugin = await x.download_media(plugin)
-                try:
-                    load_addons(plugin)
-                except Exception as e:
-                    LOGS.info(f"Ultroid - PLUGIN_CHANNEL - ERROR - {plugin}")
-                    LOGS.exception(e)
-                    os.remove(plugin)
+                    try:
+                        load_addons(plugin)
+                    except Exception as e:
+                        LOGS.info(f"Ultroid - PLUGIN_CHANNEL - ERROR - {plugin}")
+                        LOGS.exception(e)
+                        os.remove(plugin)
         except Exception as er:
             LOGS.exception(er)
 
@@ -423,9 +434,41 @@ async def plug(plugin_channels):
 # some stuffs
 
 
+async def fetch_ann():
+    from .. import asst, udB
+    from ..fns.tools import async_searcher
+
+    get_ = udB.get_key("OLDANN") or []
+    chat_id = udB.get_key("LOG_CHANNEL")
+    try:
+        updts = await async_searcher(
+            "https://ultroid-api.vercel.app/announcements", post=True, re_json=True
+        )
+        for upt in updts:
+            key = list(upt.keys())[0]
+            if key not in get_:
+                cont = upt[key]
+                if isinstance(cont, dict) and cont.get("lang"):
+                    if cont["lang"] != (udB.get_key("language") or "en"):
+                        continue
+                    cont = cont["msg"]
+                if isinstance(cont, str):
+                    await asst.send_message(chat_id, cont)
+                elif isinstance(cont, dict) and cont.get("chat"):
+                    await asst.forward_messages(chat_id, cont["msg_id"], cont["chat"])
+                else:
+                    LOGS.info(cont)
+                    LOGS.info(
+                        "Invalid Type of Announcement Detected!\nMake sure you are on latest version.."
+                    )
+                get_.append(key)
+        udB.set_key("OLDANN", get_)
+    except Exception as er:
+        LOGS.exception(er)
+
+
 async def ready():
     from .. import asst, udB, ultroid_bot
-    from ..fns.tools import async_searcher
 
     chat_id = udB.get_key("LOG_CHANNEL")
     spam_sent = None
@@ -460,31 +503,10 @@ async def ready():
         try:
             spam_sent = await ultroid_bot.send_message(chat_id, MSG)
         except Exception as ef:
-            LOGS.info(ef)
+            LOGS.exception(ef)
     if spam_sent and not spam_sent.media:
         udB.set_key("LAST_UPDATE_LOG_SPAM", spam_sent.id)
-    get_ = udB.get_key("OLDANN") or []
-    try:
-        updts = await async_searcher(
-            "https://ultroid-api.vercel.app/announcements", post=True, re_json=True
-        )
-        for upt in updts:
-            key = list(upt.keys())[0]
-            if key not in get_:
-                cont = upt[key]
-                if isinstance(cont, str):
-                    await asst.send_message(chat_id, cont)
-                elif isinstance(cont, dict) and cont.get("chat"):
-                    await asst.forward_messages(chat_id, cont["msg_id"], cont["chat"])
-                else:
-                    LOGS.info(cont)
-                    LOGS.info(
-                        "Invalid Type of Announcement Detected!\nMake sure you are on latest version.."
-                    )
-                get_.append(key)
-        udB.set_key("OLDANN", get_)
-    except Exception as er:
-        LOGS.exception(er)
+# TODO:    await fetch_ann()
 
 
 async def WasItRestart(udb):

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -20,18 +20,9 @@ from telethon.utils import get_display_name
 
 from pyUltroid.dB import DEVLIST
 from pyUltroid.fns.admins import ban_time
+from pyUltroid.fns.info import get_uinfo
 
-from . import (
-    HNDLR,
-    LOGS,
-    eod,
-    eor,
-    get_string,
-    get_uinfo,
-    inline_mention,
-    types,
-    ultroid_cmd,
-)
+from . import HNDLR, LOGS, eod, eor, get_string, inline_mention, types, ultroid_cmd
 
 
 @ultroid_cmd(
@@ -43,7 +34,6 @@ from . import (
 )
 async def prmte(ult):
     xx = await ult.eor(get_string("com_1"))
-    await ult.get_chat()
     user, rank = await get_uinfo(ult)
     rank = rank or "Admin"
     FullRight = False
@@ -87,7 +77,6 @@ async def prmte(ult):
 )
 async def dmote(ult):
     xx = await ult.eor(get_string("com_1"))
-    await ult.get_chat()
     user, rank = await get_uinfo(ult)
     if not rank:
         rank = "Not Admin"
