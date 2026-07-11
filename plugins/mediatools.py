@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -27,6 +27,7 @@ from . import (
     bash,
     downloader,
     get_string,
+    upload_file,
     is_url_ok,
     mediainfo,
     ultroid_cmd,
@@ -87,7 +88,7 @@ async def mi(e):
     makehtml = ""
     if naam.endswith((".jpg", ".png")):
         if os.path.exists(naam):
-            med = "https://graph.org" + Telegraph.upload_file(naam)[0]["src"]
+            med = upload_file(naam)
         else:
             med = match
         makehtml += f"<img src='{med}'><br>"

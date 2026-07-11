@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -211,6 +211,7 @@ async def restartbt(ult):
     if heroku_api:
         return await restart(ok)
     await bash("git pull && pip3 install -r requirements.txt")
+    await bash("pip3 install -r requirements.txt --break-system-packages")
     if len(sys.argv) > 1:
         os.execl(sys.executable, sys.executable, "main.py")
     else:
@@ -250,6 +251,14 @@ async def _(event):
     elif opt == "open":
         with open("ultroid.log", "r") as f:
             file = f.read()[-4000:]
+        return await event.eor(f"`{file}`")
+    elif (
+        opt.isdigit() and 5 <= int(opt) <= 100
+    ):  # Check if input is a number between 10 and 100
+        num_lines = int(opt)
+        with open("ultroid.log", "r") as f:
+            lines = f.readlines()[-num_lines:]
+            file = "".join(lines)
         return await event.eor(f"`{file}`")
     else:
         await def_logs(event, file)
@@ -316,6 +325,7 @@ async def _(e):
         or "soft" in e.pattern_match.group(1).strip()
     ):
         await bash("git pull -f && pip3 install -r requirements.txt")
+        await bash("pip3 install -r requirements.txt --break-system-packages")
         call_back()
         await xx.edit(get_string("upd_7"))
         os.execl(sys.executable, "python3", "-m", "pyUltroid")

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -410,7 +410,7 @@ if udB.get_key("PMSETTING"):
         if user.id in DEVLIST:
             return await eor(
                 apprvpm,
-                "Lol, He is my Developer\nHe is auto Approved",
+                "This is a developer account.\nAutomatically approved.",
             )
         if not keym.contains(user.id):
             keym.add(user.id)
@@ -461,7 +461,7 @@ if udB.get_key("PMSETTING"):
         if user.id in DEVLIST:
             return await eor(
                 e,
-                "`Lol, He is my Developer\nHe Can't Be DisApproved.`",
+                "`This is a developer account.\nCannot be disapproved.`",
             )
         if keym.contains(user.id):
             keym.remove(user.id)

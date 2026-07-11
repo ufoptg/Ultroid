@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -139,7 +139,9 @@ async def _(e):
         caption += f"**Compressed Size: **`{humanbytes(c_size)}`\n"
         caption += f"**Compression Ratio: **`{differ:.2f}%`\n"
         caption += f"\n**Time Taken To Compress: **`{difff}`"
-        mmmm = await uploader(out, out, f_time, xxx, f"Uploading {out}...")
+        n_file, _ = await e.client.fast_uploader(
+            out, show_progress=True, event=e, message="Uploading...", to_delete=True
+        )
         if to_stream:
             data = await metadata(out)
             width = data["width"]
@@ -152,7 +154,7 @@ async def _(e):
             ]
             await e.client.send_file(
                 e.chat_id,
-                mmmm,
+                n_file,
                 thumb=ULTConfig.thumb,
                 caption=caption,
                 attributes=attributes,
@@ -162,7 +164,7 @@ async def _(e):
         else:
             await e.client.send_file(
                 e.chat_id,
-                mmmm,
+                n_file,
                 thumb=ULTConfig.thumb,
                 caption=caption,
                 force_document=True,

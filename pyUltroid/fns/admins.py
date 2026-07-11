@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -26,7 +26,7 @@ def ban_time(time_str):
     if not any(time_str.endswith(unit) for unit in ("s", "m", "h", "d")):
         time_str += "s"
     unit = time_str[-1]
-    time_int = time_str[:-1]
+    time_int = time_str[:-1].strip()
     if not time_int.isdigit():
         raise Exception("Invalid time amount specified.")
     to_return = ""

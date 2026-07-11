@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -60,7 +60,7 @@ async def _(e):
         LOGS.exception(er)
         await z.edit(get_string("cha_1"))
         return
-    async for msg in e.client.iter_messages(int(c), reverse=True):
+    async for msg in e.client.iter_messages(int(c), reverse=True, limit=None):
         try:
             await asyncio.sleep(2)
             await e.client.send_message(int(d), msg)

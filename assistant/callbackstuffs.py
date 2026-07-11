@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -20,8 +20,8 @@ try:
     from pyUltroid.fns.gDrive import GDriveManager
 except ImportError:
     GDriveManager = None
-from telegraph import upload_file as upl
 from telethon import Button, events
+from catbox import CatboxUploader
 from telethon.tl.types import MessageMediaWebPage
 from telethon.utils import get_peer_id
 
@@ -34,8 +34,8 @@ from . import *
 # --------------------------------------------------------------------#
 telegraph = telegraph_client()
 GDrive = GDriveManager() if GDriveManager else None
+uploader = CatboxUploader()
 # --------------------------------------------------------------------#
-
 
 def text_to_url(event):
     """function to get media url (with|without) Webpage"""
@@ -57,23 +57,23 @@ _buttons = {
                 Button.inline("SᴜᴘᴇʀFʙᴀɴ", data="cbs_sfban"),
             ],
             [
-                Button.inline("Sᴜᴅᴏ Mᴏᴅᴇ", data="sudo"),
-                Button.inline("Hᴀɴᴅʟᴇʀ", data="hhndlr"),
+                Button.inline("Sudo Mode", data="sudo"),
+                Button.inline("Handler", data="hhndlr"),
             ],
             [
-                Button.inline("Exᴛʀᴀ Pʟᴜɢɪɴs", data="plg"),
-                Button.inline("Aᴅᴅᴏɴs", data="eaddon"),
+                Button.inline("Extra Plugins", data="plg"),
+                Button.inline("Addons", data="eaddon"),
             ],
             [
-                Button.inline("Eᴍᴏᴊɪ ɪɴ Hᴇʟᴘ", data="emoj"),
-                Button.inline("Sᴇᴛ ɢDʀɪᴠᴇ", data="gdrive"),
+                Button.inline("Emoji in Help", data="emoj"),
+                Button.inline("Set gDrive", data="gdrive"),
             ],
             [
-                Button.inline("Iɴʟɪɴᴇ Pɪᴄ", data="inli_pic"),
-                Button.inline("Sᴜᴅᴏ HNDLR", data="shndlr"),
+                Button.inline("Inline Pic", data="inli_pic"),
+                Button.inline("Sudo HNDLR", data="shndlr"),
             ],
-            [Button.inline("Dᴜᴀʟ Mᴏᴅᴇ", "cbs_oofdm")],
-            [Button.inline("« Bᴀᴄᴋ", data="setter")],
+            [Button.inline("Dual Mode", "cbs_oofdm")],
+            [Button.inline("« Back", data="setter")],
         ],
     },
     "sfban": {
@@ -322,8 +322,8 @@ async def update(eve):
         await eve.edit(get_string("clst_1"))
         call_back()
         await bash("git pull && pip3 install -r requirements.txt")
+        await bash("pip3 install -r requirements.txt --break-system-packages")
         execl(sys.executable, sys.executable, "-m", "pyUltroid")
-
 
 @callback(re.compile("changes(.*)"), owner=True)
 async def changes(okk):
@@ -384,11 +384,14 @@ async def _(e):
     if "|" in ok:
         ok, index = ok.split("|")
     with open(ok, "r") as hmm:
-        _, key = await get_paste(hmm.read())
-    link = f"https://spaceb.in/{key}"
-    raw = f"https://spaceb.in/api/v1/documents/{key}/raw"
-    if not _:
+        _, data = await get_paste(hmm.read())
+    if not data.get("link"):
         return await e.answer(key[:30], alert=True)
+    if not key.startswith("http"):
+        link, raw = data["link"], data["raw"]
+    else:
+        link = key
+        raw = f"{key}/raw"
     if ok.startswith("addons"):
         key = "Addons"
     elif ok.startswith("vcbot"):
@@ -830,8 +833,7 @@ async def media(event):
         else:
             media = await event.client.download_media(response, "alvpc")
             try:
-                x = upl(media)
-                url = f"https://graph.org/{x[0]}"
+                url = uploader.upload_file(media)
                 remove(media)
             except BaseException as er:
                 LOGS.exception(er)
@@ -969,8 +971,7 @@ async def media(event):
             url = response.file.id
         else:
             try:
-                x = upl(media)
-                url = f"https://graph.org/{x[0]}"
+                url = uploader.upload_file(media)
                 remove(media)
             except BaseException as er:
                 LOGS.exception(er)
@@ -1239,8 +1240,7 @@ async def media(event):
             url = text_to_url(response)
         else:
             try:
-                x = upl(media)
-                url = f"https://graph.org/{x[0]}"
+                url = uploader.upload_file(media)
                 remove(media)
             except BaseException as er:
                 LOGS.exception(er)

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -7,7 +7,7 @@
 
 import os
 import sys
-
+import telethonpatch
 from .version import __version__
 
 run_as_module = __package__ in sys.argv or sys.argv[0] == "-m"

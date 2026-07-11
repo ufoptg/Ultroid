@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -49,6 +49,7 @@
   Get messages from chats with forward/copy restrictions.
 """
 
+import asyncio
 import calendar
 import html
 import io
@@ -66,12 +67,10 @@ from pyUltroid._misc._assistant import asst_cmd
 from pyUltroid.dB.gban_mute_db import is_gbanned
 from pyUltroid.fns.tools import get_chat_and_msgid
 
-try:
-    from telegraph import upload_file as uf
-except ImportError:
-    uf = None
+from . import upload_file as uf
 
 from telethon.errors.rpcerrorlist import ChatForwardsRestrictedError, UserBotError
+from telethon.errors import MessageTooLongError
 from telethon.events import NewMessage
 from telethon.tl.custom import Dialog
 from telethon.tl.functions.channels import (
@@ -90,6 +89,11 @@ from telethon.tl.types import (
     PollAnswer,
     TLObject,
     User,
+    UserStatusOffline,
+    UserStatusOnline,
+    MessageMediaPhoto,
+    MessageMediaDocument,
+    DocumentAttributeVideo,
 )
 from telethon.utils import get_peer_id
 
@@ -119,6 +123,8 @@ from . import (
 # =================================================================#
 
 TMP_DOWNLOAD_DIRECTORY = "resources/downloads/"
+
+CAPTION_LIMIT = 1024  # Telegram's caption character limit for non-premium
 
 _copied_msg = {}
 
@@ -257,18 +263,16 @@ async def _(event):
         return await xx.eor(
             "`Reply to a Message/Document or Give me Some Text !`", time=5
         )
-    done, key = await get_paste(message)
-    if not done:
-        return await xx.eor(key)
-    link = f"https://spaceb.in/{key}"
-    raw = f"https://spaceb.in/api/v1/documents/{key}/raw"
+    done, data = await get_paste(message)
+    if not done and data.get("error"):
+        return await xx.eor(data["error"])
     reply_text = (
-        f"• **Pasted to SpaceBin :** [Space]({link})\n• **Raw Url :** : [Raw]({raw})"
+        f"• **Pasted to SpaceBin :** [Space]({data['link']})\n• **Raw Url :** : [Raw]({data['raw']})"
     )
     try:
         if event.client._bot:
             return await xx.eor(reply_text)
-        ok = await event.client.inline_query(asst.me.username, f"pasta-{key}")
+        ok = await event.client.inline_query(asst.me.username, f"pasta-{data['link']}")
         await ok[0].click(event.chat_id, reply_to=event.reply_to_msg_id, hide_via=True)
         await xx.delete()
     except BaseException as e:
@@ -335,19 +339,19 @@ async def _(event):
         dc_id = user.photo.dc_id
     else:
         dc_id = "Need a Profile Picture to check this"
-    caption = """<b>Exᴛʀᴀᴄᴛᴇᴅ Dᴀᴛᴀ Fʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ's Dᴀᴛᴀʙᴀsᴇ<b>
-<b>••Tᴇʟᴇɢʀᴀᴍ ID</b>: <code>{}</code>
-<b>••Pᴇʀᴍᴀɴᴇɴᴛ Lɪɴᴋ</b>: <a href='tg://user?id={}'>Click Here</a>
-<b>••Fɪʀsᴛ Nᴀᴍᴇ</b>: <code>{}</code>
-<b>••Sᴇᴄᴏɴᴅ Nᴀᴍᴇ</b>: <code>{}</code>
-<b>••Bɪᴏ</b>: <code>{}</code>
-<b>••Dᴄ ID</b>: <code>{}</code>
-<b>••Nᴏ. Oғ PғPs</b> : <code>{}</code>
-<b>••Is Rᴇsᴛʀɪᴄᴛᴇᴅ</b>: <code>{}</code>
-<b>••Vᴇʀɪғɪᴇᴅ</b>: <code>{}</code>
-<b>••Is Pʀᴇᴍɪᴜᴍ</b>: <code>{}</code>
-<b>••Is A Bᴏᴛ</b>: <code>{}</code>
-<b>••Gʀᴏᴜᴘs Iɴ Cᴏᴍᴍᴏɴ</b>: <code>{}</code>
+    caption = """<b>Extracted Data From Telegram's Database</b>
+<b>• Telegram ID</b>: <code>{}</code>
+<b>• Permanent Link</b>: <a href='tg://user?id={}'>Click Here</a>
+<b>• First Name</b>: <code>{}</code>
+<b>• Last Name</b>: <code>{}</code>
+<b>• Bio</b>: <code>{}</code>
+<b>• DC ID</b>: <code>{}</code>
+<b>• Number of Profile Pictures</b>: <code>{}</code>
+<b>• Is Restricted</b>: <code>{}</code>
+<b>• Verified</b>: <code>{}</code>
+<b>• Is Premium</b>: <code>{}</code>
+<b>• Is A Bot</b>: <code>{}</code>
+<b>• Groups In Common</b>: <code>{}</code>
 """.format(
         user_id,
         user_id,
@@ -497,7 +501,7 @@ async def telegraphcmd(event):
             getit = file
         if "document" not in dar:
             try:
-                nn = f"https://graph.org{uf(getit)[0]}"
+                nn = uf(getit)
                 amsg = f"Uploaded to [Telegraph]({nn}) !"
             except Exception as e:
                 amsg = f"Error : {e}"
@@ -692,51 +696,134 @@ async def thumb_dl(event):
     os.remove(m)
 
 
+async def get_video_duration(file_path):
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        file_path,
+    ]
+    try:
+        result = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await result.communicate()
+        duration = float(stdout.decode().strip())
+        return duration
+    except Exception as e:
+        print("Error running ffprobe:", e)
+        return None
+
+async def get_thumbnail(file_path, thumbnail_path):
+    try:
+        await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-i", file_path,
+            "-ss", "00:00:04",
+            "-vframes", "1",  # Extract a single frame as the thumbnail
+            thumbnail_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except Exception as e:
+        print(f"Error extracting thumbnail: {e}")
+
 @ultroid_cmd(pattern="getmsg( ?(.*)|$)")
-async def get_restriced_msg(event):
+async def get_restricted_msg(event):
     match = event.pattern_match.group(1).strip()
     if not match:
         await event.eor("`Please provide a link!`", time=5)
         return
-    xx = await event.eor(get_string("com_1"))
+    
+    xx = await event.eor("`Loading...`")
     chat, msg = get_chat_and_msgid(match)
     if not (chat and msg):
         return await event.eor(
-            f"{get_string('gms_1')}!\nEg: `https://t.me/TeamUltroid/3 or `https://t.me/c/1313492028/3`"
+            "Invalid link!\nExamples:\n"
+            "`https://t.me/TeamUltroid/3`\n"
+            "`https://t.me/c/1313492028/3`\n"
+            "`tg://openmessage?user_id=1234567890&message_id=1`"
         )
+    
     try:
-        message = await event.client.get_messages(chat, ids=msg)
+        input_entity = await event.client.get_input_entity(chat)
+        message = await event.client.get_messages(input_entity, ids=msg)
     except BaseException as er:
         return await event.eor(f"**ERROR**\n`{er}`")
+    
+    if not message:
+        return await event.eor("`Message not found or may not exist.`")
+    
     try:
         await event.client.send_message(event.chat_id, message)
         await xx.try_delete()
         return
     except ChatForwardsRestrictedError:
         pass
+    
     if message.media:
-        thumb = None
-        if message.document.thumbs:
-            thumb = await message.download_media(thumb=-1)
-        media, _ = await event.client.fast_downloader(
-            message.document,
-            show_progress=True,
-            event=xx,
-            message=f"Downloading {message.file.name}...",
-        )
-        await xx.edit("`Uploading...`")
-        uploaded, _ = await event.client.fast_uploader(
-            media.name, event=xx, show_progress=True, to_delete=True
-        )
-        typ = not bool(message.video)
-        await event.reply(
-            message.text,
-            file=uploaded,
-            supports_streaming=typ,
-            force_document=typ,
-            thumb=thumb,
-            attributes=message.document.attributes,
-        )
-        await xx.delete()
-        if thumb:
-            os.remove(thumb)
+        if isinstance(message.media, (MessageMediaPhoto, MessageMediaDocument)):
+            media_path, _ = await event.client.fast_downloader(message.document, show_progress=True, event=xx, message=get_string("com_5"))
+
+            caption = message.text or ""
+
+            attributes = []
+            if message.video:
+                duration = await get_video_duration(media_path.name)
+                
+                width, height = 0, 0
+                for attribute in message.document.attributes:
+                    if isinstance(attribute, DocumentAttributeVideo):
+                        width = attribute.w
+                        height = attribute.h
+                        break
+                
+                thumb_path = media_path.name + "_thumb.jpg"
+                await get_thumbnail(media_path.name, thumb_path)
+
+                attributes.append(
+                    DocumentAttributeVideo(
+                        duration=int(duration) if duration else 0,
+                        w=width,
+                        h=height,
+                        supports_streaming=True,
+                    )
+                )
+            await xx.edit(get_string("com_6"))
+            media_path, _ = await event.client.fast_uploader(media_path.name, event=xx, show_progress=True, to_delete=True)
+
+            try:
+                await event.client.send_file(
+                    event.chat_id,
+                    media_path,
+                    caption=caption,
+                    force_document=False,
+                    supports_streaming=True if message.video else False,
+                    thumb=thumb_path if message.video else None,
+                    attributes=attributes if message.video else None,
+                )
+            except MessageTooLongError:
+                if len(caption) > CAPTION_LIMIT:
+                    caption = caption[:CAPTION_LIMIT] + "..."
+                await event.client.send_file(
+                    event.chat_id,
+                    media_path,
+                    caption=caption,
+                    force_document=False,  # Set to True if you want to send as a document
+                    supports_streaming=True if message.video else False,
+                    thumb=thumb_path if message.video else None,
+                    attributes=attributes if message.video else None,
+                )
+
+            if message.video and os.path.exists(thumb_path):
+                os.remove(thumb_path)
+            await xx.try_delete()
+        else:
+            await event.eor("`Cannot process this type of media.`")
+    else:
+        await event.eor("`No media found in the message.`")
+

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -63,13 +63,15 @@ async def zipp(event):
     else:
         await bash(f"zip -r {inp} {file}")
     k = time.time()
-    xxx = await uploader(inp, inp, k, xx, get_string("com_6"))
+    n_file, _ = await event.client.fast_uploader(
+        inp, show_progress=True, event=event, message="Uploading...", to_delete=True
+    )
     await event.client.send_file(
         event.chat_id,
-        xxx,
+        n_file,
         force_document=True,
         thumb=ULTConfig.thumb,
-        caption=f"`{xxx.name}`",
+        caption=f"`{n_file.name}`",
         reply_to=reply,
     )
     os.remove(inp)
@@ -104,13 +106,15 @@ async def unzipp(event):
     ok = get_all_files("unzip")
     for x in ok:
         k = time.time()
-        xxx = await uploader(x, x, k, xx, get_string("com_6"))
+        n_file, _ = await event.client.fast_uploader(
+            x, show_progress=True, event=event, message="Uploading...", to_delete=True
+        )
         await event.client.send_file(
             event.chat_id,
-            xxx,
+            n_file,
             force_document=True,
             thumb=ULTConfig.thumb,
-            caption=f"`{xxx.name}`",
+            caption=f"`{n_file.name}`",
         )
     await xx.delete()
 

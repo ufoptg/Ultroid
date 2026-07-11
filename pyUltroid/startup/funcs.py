@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -10,6 +10,7 @@ import os
 import random
 import shutil
 import time
+from datetime import datetime, timezone as dt_timezone
 from random import randint
 
 from ..configs import Var
@@ -33,6 +34,7 @@ from telethon.tl.functions.channels import (
     EditPhotoRequest,
     InviteToChannelRequest,
 )
+from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.tl.functions.contacts import UnblockRequest
 from telethon.tl.types import (
     ChatAdminRights,
@@ -46,6 +48,8 @@ from .. import LOGS, ULTConfig
 from ..fns.helper import download_file, inline_mention, updater
 
 db_url = 0
+REDIS_KEEPALIVE_KEY = "KEEP_ACTIVE"
+REDIS_KEEPALIVE_INTERVAL_SECONDS = 7 * 24 * 60 * 60
 
 
 async def autoupdate_local_database():
@@ -149,6 +153,33 @@ async def startup_stuff():
             )
             os.environ["TZ"] = "UTC"
             time.tzset()
+
+
+async def keep_redis_alive():
+    from .. import udB
+
+    if udB.name != "Redis":
+        return
+
+    interval = udB.get_key("REDIS_KEEPALIVE_INTERVAL")
+    try:
+        interval = int(interval) if interval else REDIS_KEEPALIVE_INTERVAL_SECONDS
+    except (TypeError, ValueError):
+        interval = REDIS_KEEPALIVE_INTERVAL_SECONDS
+    interval = max(interval, 60)
+
+    while True:
+        try:
+            now = datetime.now(dt_timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            udB.set_key(REDIS_KEEPALIVE_KEY, f"Updated value at {now}")
+            LOGS.debug(
+                "Redis keepalive updated key '%s' (next run in %s seconds).",
+                REDIS_KEEPALIVE_KEY,
+                interval,
+            )
+        except Exception as exc:
+            LOGS.warning("Redis keepalive update failed: %s", exc)
+        await asyncio.sleep(interval)
 
 
 async def autobot():
@@ -337,7 +368,7 @@ async def customize():
         chat_id = udB.get_key("LOG_CHANNEL")
         if asst.me.photo:
             return
-        LOGS.info("Customising Ur Assistant Bot in @BOTFATHER")
+        LOGS.info("Customising Your Assistant Bot in @BOTFATHER")
         UL = f"@{asst.me.username}"
         if not ultroid_bot.me.username:
             sir = ultroid_bot.me.first_name
@@ -431,41 +462,6 @@ async def plug(plugin_channels):
             LOGS.exception(er)
 
 
-# some stuffs
-
-
-async def fetch_ann():
-    from .. import asst, udB
-    from ..fns.tools import async_searcher
-
-    get_ = udB.get_key("OLDANN") or []
-    chat_id = udB.get_key("LOG_CHANNEL")
-    try:
-        updts = await async_searcher(
-            "https://ultroid-api.vercel.app/announcements", post=True, re_json=True
-        )
-        for upt in updts:
-            key = list(upt.keys())[0]
-            if key not in get_:
-                cont = upt[key]
-                if isinstance(cont, dict) and cont.get("lang"):
-                    if cont["lang"] != (udB.get_key("language") or "en"):
-                        continue
-                    cont = cont["msg"]
-                if isinstance(cont, str):
-                    await asst.send_message(chat_id, cont)
-                elif isinstance(cont, dict) and cont.get("chat"):
-                    await asst.forward_messages(chat_id, cont["msg_id"], cont["chat"])
-                else:
-                    LOGS.info(cont)
-                    LOGS.info(
-                        "Invalid Type of Announcement Detected!\nMake sure you are on latest version.."
-                    )
-                get_.append(key)
-        udB.set_key("OLDANN", get_)
-    except Exception as er:
-        LOGS.exception(er)
-
 
 async def ready():
     from .. import asst, udB, ultroid_bot
@@ -506,7 +502,11 @@ async def ready():
             LOGS.exception(ef)
     if spam_sent and not spam_sent.media:
         udB.set_key("LAST_UPDATE_LOG_SPAM", spam_sent.id)
-# TODO:    await fetch_ann()
+
+    try:
+        await ultroid_bot(JoinChannelRequest("TheUltroid"))
+    except Exception as er:
+        LOGS.exception(er)
 
 
 async def WasItRestart(udb):

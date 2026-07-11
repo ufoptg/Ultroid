@@ -11,15 +11,14 @@
 [![Stars](https://img.shields.io/github/stars/TeamUltroid/Ultroid?style=flat-square&color=yellow)](https://github.com/TeamUltroid/Ultroid/stargazers)
 [![Forks](https://img.shields.io/github/forks/TeamUltroid/Ultroid?style=flat-square&color=orange)](https://github.com/TeamUltroid/Ultroid/fork)
 [![Size](https://img.shields.io/github/repo-size/TeamUltroid/Ultroid?style=flat-square&color=green)](https://github.com/TeamUltroid/Ultroid/)   
-[![Python](https://img.shields.io/badge/Python-v3.10.3-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-v3.10+-blue)](https://www.python.org/)
 [![CodeFactor](https://www.codefactor.io/repository/github/teamultroid/ultroid/badge/main)](https://www.codefactor.io/repository/github/teamultroid/ultroid/overview/main)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/TeamUltroid/Ultroid/graphs/commit-activity)
 [![Docker Pulls](https://img.shields.io/docker/pulls/theteamultroid/ultroid?style=flat-square)](https://img.shields.io/docker/pulls/theteamultroid/ultroid?style=flat-square)   
 [![Open Source Love svg2](https://badges.frapsoft.com/os/v2/open-source.svg?v=103)](https://github.com/TeamUltroid/Ultroid)
 [![Contributors](https://img.shields.io/github/contributors/TeamUltroid/Ultroid?style=flat-square&color=green)](https://github.com/TeamUltroid/Ultroid/graphs/contributors)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
-[![License](https://img.shields.io/badge/License-AGPL-blue)](https://github.com/TeamUltroid/Ultroid/blob/main/LICENSE)   
-[![Sparkline](https://stars.medv.io/Teamultroid/Ultroid.svg)](https://stars.medv.io/TeamUltroid/Ultroid)
+[![License](https://img.shields.io/badge/License-AGPL-blue)](https://github.com/TeamUltroid/Ultroid/blob/main/LICENSE)
 ----
 
 # Deploy
@@ -39,8 +38,13 @@
 ## Deploy to Heroku
 Get the [Necessary Variables](#Necessary-Variables) and then click the button below!  
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://deploy.ultroid.tech)
-
+<summary>Deploy To Heroku</summary>
+<p>
+<br>
+<a href="https://heroku.com/deploy">
+  <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy">
+</a>
+</p>
 ## Deploy to Okteto
 Get the [Necessary Variables](#Necessary-Variables) and then click the button below!
 
@@ -108,12 +112,42 @@ Different ways to get your `SESSION`:
 
 ---
 
+# Core Contributor Team
+
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/xditya"><img src="https://avatars.githubusercontent.com/xditya" width="75px;" alt=""/><br/><sub><b>@xditya</b></sub></a></td>
+    <td align="center"><a href="https://github.com/1danish-00"><img src="https://avatars.githubusercontent.com/1danish-00" width="75px;" alt=""/><br/><sub><b>@1danish_00</b></sub></a></td>
+    <td align="center"><a href="https://github.com/buddhhu"><img src="https://avatars.githubusercontent.com/buddhhu" width="75px;" alt=""/><br/><sub><b>@buddhhu</b></sub></a></td>
+    <td align="center"><a href="https://github.com/TechiError"><img src="https://avatars.githubusercontent.com/TechiError" width="75px;" alt=""/><br/><sub><b>@TechiError</b></sub></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/New-dev0"><img src="https://avatars.githubusercontent.com/New-dev0" width="75px;" alt=""/><br/><sub><b>@New-dev0</b></sub></a></td>
+    <td align="center"><a href="https://github.com/ArnabXD"><img src="https://avatars.githubusercontent.com/ArnabXD" width="75px;" alt=""/><br/><sub><b>@Arnab431</b></sub></a></td>
+    <td align="center"><a href="https://github.com/sppidy"><img src="https://avatars.githubusercontent.com/sppidy" width="75px;" alt=""/><br/><sub><b>@sppidy</b></sub></a></td>
+    <td align="center"><a href="https://github.com/Atul-Kumar-Jena"><img src="https://avatars.githubusercontent.com/Atul-kumar-Jena" width="75px;" alt=""/><br/><sub><b>@hellboi_atul</b></sub></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/iAkashPattnaik"><img src="https://avatars.githubusercontent.com/iAkashPattnaik" width="75px;" alt=""/><br/><sub><b>@iAkashPattnaik</b></sub></a></td>
+  </tr>
+</table>
+
+## Contributors
+
+<a href="https://github.com/TeamUltroid/Ultroid/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=TeamUltroid/Ultroid" />
+</a>
+
+We are highly grateful for all the contributions made by our amazing community! ❤️
+
+---
+
 # License
 [![License](https://www.gnu.org/graphics/agplv3-155x51.png)](LICENSE)   
 Ultroid is licensed under [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html) v3 or later.
 
----
 
+---
 # Credits
 * [![TeamUltroid-Devs](https://img.shields.io/static/v1?label=Teamultroid&message=devs&color=critical)](https://t.me/UltroidDevs)
 * [Lonami](https://github.com/LonamiWebs/) for [Telethon.](https://github.com/LonamiWebs/Telethon)

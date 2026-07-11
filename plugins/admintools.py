@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -397,7 +397,6 @@ async def _(e):
         await e.eor(get_string("purgeall_2").format(name.first_name), time=5)
     except Exception as er:
         return await e.eor(str(er), time=5)
-
 
 @ultroid_cmd(pattern="pinned", manager=True, groups_only=True)
 async def djshsh(event):

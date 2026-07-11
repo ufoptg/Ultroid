@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -128,6 +128,7 @@ class UltroidClient(TelegramClient):
                         with contextlib.suppress(FileNotFoundError):
                             os.remove(file)
                     return files["raw_file"], time.time() - start_time
+
         from pyUltroid.fns.FastTelethon import upload_file
         from pyUltroid.fns.helper import progress
 

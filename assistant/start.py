@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -35,24 +35,24 @@ if Owner_info_msg is None:
 
 _settings = [
     [
-        Button.inline("API Kᴇʏs", data="cbs_apiset"),
-        Button.inline("Pᴍ Bᴏᴛ", data="cbs_chatbot"),
+        Button.inline("API Keys", data="cbs_apiset"),
+        Button.inline("PM Bot", data="cbs_chatbot"),
     ],
     [
-        Button.inline("Aʟɪᴠᴇ", data="cbs_alvcstm"),
-        Button.inline("PᴍPᴇʀᴍɪᴛ", data="cbs_ppmset"),
+        Button.inline("Alive", data="cbs_alvcstm"),
+        Button.inline("PMPermit", data="cbs_ppmset"),
     ],
     [
-        Button.inline("Fᴇᴀᴛᴜʀᴇs", data="cbs_otvars"),
-        Button.inline("VC Sᴏɴɢ Bᴏᴛ", data="cbs_vcb"),
+        Button.inline("Features", data="cbs_otvars"),
+        Button.inline("VC Song Bot", data="cbs_vcb"),
     ],
-    [Button.inline("« Bᴀᴄᴋ", data="mainmenu")],
+    [Button.inline("« Back", data="mainmenu")],
 ]
 
 _start = [
     [
-        Button.inline("Lᴀɴɢᴜᴀɢᴇ 🌐", data="lang"),
-        Button.inline("Sᴇᴛᴛɪɴɢs ⚙️", data="setter"),
+        Button.inline("Language 🌐", data="lang"),
+        Button.inline("Settings ⚙️", data="setter"),
     ],
     [
         Button.inline("Sᴛᴀᴛs ✨", data="stat"),

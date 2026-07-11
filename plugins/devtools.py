@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -33,10 +33,8 @@ try:
     from yaml import safe_load
 except ImportError:
     from pyUltroid.fns.tools import safe_load
-try:
-    from telegraph import upload_file as uf
-except ImportError:
-    uf = None
+
+from . import upload_file as uf
 from telethon.tl import functions
 
 fn = functions
@@ -99,7 +97,7 @@ async def _(event):
                     f"Unknown Response from Carbon: `{li}`\n\nstdout`:{stdout}`\nstderr: `{stderr}`"
                 )
                 return
-            url = f"https://graph.org{uf(li)[-1]}"
+            url = uf(li)
             OUT = f"[\xad]({url}){OUT}"
             out = "**• OUTPUT:**"
             remove(li)
@@ -121,7 +119,7 @@ async def _(event):
                     f"Unknown Response from Carbon: `{li}`\n\nstdout`:{stdout}`\nstderr: `{stderr}`"
                 )
                 return
-            url = f"https://graph.org{uf(li)[-1]}"
+            url = uf(li)
             OUT = f"[\xad]({url}){OUT}"
             out = "**• OUTPUT:**"
             remove(li)
@@ -323,19 +321,35 @@ def _stringify(text=None, *args, **kwargs):
 
 
 async def aexec(code, event):
-    exec(
-        (
-            "async def __aexec(e, client): "
-            + "\n print = p = _stringify"
-            + "\n message = event = e"
-            + "\n u.r = reply = await event.get_reply_message()"
-            + "\n chat = event.chat_id"
-            + "\n u.lr = locals()"
-        )
-        + "".join(f"\n {l}" for l in code.split("\n"))
+    # Create a dedicated namespace for execution
+    exec_globals = {
+        'print': _stringify,
+        'p': _stringify,
+        'message': event,
+        'event': event,
+        'client': event.client,
+        'reply': await event.get_reply_message(),
+        'chat': event.chat_id,
+        'u': u,
+        '__builtins__': __builtins__,
+        '__name__': __name__
+    }
+    
+    # Format the async function definition
+    wrapped_code = (
+        'async def __aexec(e, client):\n' +
+        '\n'.join(f'    {line}' for line in code.split('\n'))
     )
-
-    return await locals()["__aexec"](event, event.client)
+    
+    try:
+        # Execute the wrapped code in our custom namespace
+        exec(wrapped_code, exec_globals)
+        # Get the defined async function
+        func = exec_globals['__aexec']
+        # Execute it with proper parameters
+        return await func(event, event.client)
+    except Exception as e:
+        raise Exception(f"Failed to execute code: {str(e)}")
 
 
 DUMMY_CPP = """#include <iostream>

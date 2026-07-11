@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2023 TeamUltroid
+# Copyright (C) 2021-2026 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -78,6 +78,21 @@ def ultroid_cmd(
 
     def decor(dec):
         async def wrapp(ult):
+            if udB.get_key("COMMAND_LOGGER"):
+                user_id = ult.sender_id
+                chat_id = ult.chat_id
+                command_name = pattern if pattern else ult.text.split()[0].lstrip(HNDLR)
+                chat_name = get_display_name(ult.chat)
+                LOGS.info(f"Command '{command_name}' executed by user ID {user_id} in chat {chat_id} ({chat_name})")
+                log_channel = udB.get_key("LOG_CHANNEL")
+                if log_channel:
+                    try:
+                        await asst.send_message(
+                            log_channel,
+                            f"Command '{command_name}' executed by user ID {user_id} in chat {chat_id} ({chat_name})"
+                        )
+                    except Exception as e:
+                        LOGS.warning(f"Failed to send command log to log channel {log_channel}: {e}")
             if not ult.out:
                 if owner_only:
                     return
